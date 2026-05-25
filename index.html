@@ -411,6 +411,28 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 }
 .c-queue-status.s-marked  { background: rgba(0,255,100,0.12); color: #00cc66; border: 1px solid rgba(0,200,80,0.25); }
 .c-queue-status.s-building { background: rgba(0,229,255,0.12); color: #00e5ff; border: 1px solid rgba(0,200,230,0.25); }
+
+/* ── Clickable floor badge in queue meta line ── */
+.c-queue-floor-link {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: rgba(58,95,143,0.25); border: 1px solid #2a4060;
+    border-radius: 4px; padding: 1px 6px; font-size: 11px;
+    color: #6a9adf; cursor: pointer; transition: all 0.15s;
+    text-decoration: none; white-space: nowrap;
+}
+.c-queue-floor-link:hover {
+    background: rgba(58,95,143,0.55); border-color: #4a7fbf;
+    color: #aad4ff;
+}
+
+/* ── Per-floor section divider in queue ── */
+.c-queue-floor-divider {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    color: #4a7aaa; padding: 2px 4px; flex-shrink: 0; margin-top: 2px;
+}
+.c-queue-floor-divider::before,
+.c-queue-floor-divider::after { content: ''; flex: 1; height: 1px; background: #1e3050; }
 </style>
 </head>
 <body>
@@ -1199,29 +1221,30 @@ function commitErase() {
 let _queueDomIds = [];   // порядок id в DOM — чтобы не пересоздавать без нужды
 
 function updateQueueUI() {
-    const fl  = buildQueue.filter(i => i.floor === currentFloor);
-    const ids = fl.map(i => i.id);
+    // Show ALL items across all floors
+    const all = buildQueue;
+    const ids = all.map(i => i.id);
     if (JSON.stringify(ids) !== JSON.stringify(_queueDomIds)) {
-        rebuildQueueDOM(fl);
+        rebuildQueueDOM(all);
         _queueDomIds = ids.slice();
     } else {
-        tickQueueTimers(fl);
+        tickQueueTimers(all);
     }
 
     const btn = document.getElementById('cBuildBtn');
     const cnt = document.getElementById('cQueueCount');
 
-    const uncommitted = fl.filter(i => !i.committed);
-    const committed   = fl.filter(i =>  i.committed);
+    const allUncommitted = buildQueue.filter(i => !i.committed);
+    const allCommitted   = buildQueue.filter(i =>  i.committed);
 
-    cnt.textContent    = fl.length;
-    cnt.style.display  = fl.length ? '' : 'none';
+    // Badge shows total queue size across all floors
+    cnt.textContent   = buildQueue.length;
+    cnt.style.display = buildQueue.length ? '' : 'none';
 
-    if (uncommitted.length) {
-        // New rooms waiting — always show the button, even while building
+    if (allUncommitted.length) {
         btn.disabled = false;
-        btn.textContent = `⚙️ Построить (${uncommitted.length})`;
-        btn.classList.toggle('new-batch', isBuildingActive || committed.length > 0);
+        btn.textContent = `⚙️ Построить (${allUncommitted.length})`;
+        btn.classList.toggle('new-batch', isBuildingActive || allCommitted.length > 0);
     } else if (isBuildingActive) {
         btn.disabled = true;
         btn.textContent = '⏳ Строится...';
@@ -1242,7 +1265,7 @@ function updatePreviewUI() {
     if (!previewQueueItem) {
         if (existingEl) existingEl.remove();
         // If queue is now empty and no preview, restore empty message if needed
-        if (!buildQueue.filter(i=>i.floor===currentFloor).length &&
+        if (!buildQueue.length &&
             !list.querySelector('.c-queue-item') &&
             !list.querySelector('.c-queue-empty')) {
             list.innerHTML = '<div class="c-queue-empty">Очередь пуста.<br/>ЛКМ — разметить, ПКМ — удалить.</div>';
@@ -1268,21 +1291,17 @@ function updatePreviewUI() {
     }
 }
 
-function rebuildQueueDOM(fl) {
+function rebuildQueueDOM(all) {
     const list  = document.getElementById('cQueueList');
     const total = document.getElementById('cQueueTotal');
 
-    if (!fl.length) {
+    if (!all.length) {
         list.innerHTML = '<div class="c-queue-empty">Очередь пуста.<br/>ЛКМ — разметить, ПКМ — удалить.</div>';
         total.style.display = 'none';
         return;
     }
 
-    const committed   = fl.filter(i =>  i.committed);
-    const uncommitted = fl.filter(i => !i.committed);
-    const hasBoth     = committed.length > 0 && uncommitted.length > 0;
-
-    function renderItem(item, idx, allItems) {
+    function renderItem(item) {
         const rd = ROOMS_DB[item.roomType] || {};
         const cost = item.cells.size * (rd.cost || 2);
         const isBuilding = buildingState && buildingState.id === item.id;
@@ -1292,24 +1311,24 @@ function rebuildQueueDOM(fl) {
         const remSec  = Math.ceil((totalTime - progress) / 1000);
         const statusCls  = isBuilding ? 's-building' : 's-marked';
         const statusText = isBuilding ? 'Строится' : 'Размечено';
-        const isFirst = idx === 0;
-        const isLast  = idx === allItems.length - 1;
-        // Global position in full fl array for ▲▼ arrows
-        const flIdx   = fl.indexOf(item);
-        const flFirst = flIdx === 0;
-        const flLast  = flIdx === fl.length - 1;
+        const allIdx  = all.indexOf(item);
+        const allFirst = allIdx === 0;
+        const allLast  = allIdx === all.length - 1;
+        // floor badge — clicking jumps to that floor
+        const isCurrentFloor = item.floor === currentFloor;
+        const floorBadge = `<span class="c-queue-floor-link${isCurrentFloor ? ' current' : ''}" onclick="switchFloor(${item.floor})" title="Перейти на этаж ${item.floor}">🏢 Этаж ${item.floor}</span>`;
         return `<div class="c-queue-item${isBuilding ? ' building' : ''}"
                      data-id="${item.id}"
                      data-committed="${item.committed ? '1' : '0'}"
                      style="border-left-color:${isBuilding ? '#00e5ff' : item.committed ? '#ffaa33' : '#4a9aff'}">
             <div class="c-queue-order-ctrl">
-                <button class="c-queue-order-btn" ${flFirst ? 'disabled' : ''} onclick="moveQueueItem(${item.id},-1)">▲</button>
+                <button class="c-queue-order-btn" ${allFirst ? 'disabled' : ''} onclick="moveQueueItem(${item.id},-1)">▲</button>
                 <div class="c-queue-drag-handle" data-drag-id="${item.id}">⠿</div>
-                <button class="c-queue-order-btn" ${flLast ? 'disabled' : ''} onclick="moveQueueItem(${item.id},1)">▼</button>
+                <button class="c-queue-order-btn" ${allLast ? 'disabled' : ''} onclick="moveQueueItem(${item.id},1)">▼</button>
             </div>
             <button class="c-queue-cancel" onclick="removeQueueItem(${item.id})">✕</button>
             <div class="c-queue-item-name">${rd.icon || '❓'} ${rd.name || item.roomType}${isBuilding ? ' 🔨' : ''} <span class="c-queue-status ${statusCls}">${statusText}</span></div>
-            <div class="c-queue-item-meta">${item.cells.size} тайл(ов) • Этаж ${item.floor} • ${cost} металла</div>
+            <div class="c-queue-item-meta">${item.cells.size} тайл(ов) • ${floorBadge} • ${cost} металла</div>
             <div class="c-queue-item-timer" style="display:${(isBuilding || progress > 0) ? 'block' : 'none'}">
                 <div class="c-queue-timer" style="color:${isBuilding ? '#00e5ff' : '#778'}">
                     ${isBuilding ? `⏱ ${remSec}с осталось` : `⏸ ${Math.round(progress / 1000)}с / ${Math.round(totalTime / 1000)}с`}
@@ -1319,12 +1338,17 @@ function rebuildQueueDOM(fl) {
         </div>`;
     }
 
+    // Group by committed vs uncommitted, preserve order within each group
+    const committed   = all.filter(i =>  i.committed);
+    const uncommitted = all.filter(i => !i.committed);
+    const hasBoth     = committed.length > 0 && uncommitted.length > 0;
+
     let html = '';
-    committed.forEach((item, idx) => { html += renderItem(item, idx, committed); });
+    committed.forEach(item => { html += renderItem(item); });
     if (hasBoth) {
-        html += `<div class="c-queue-batch-divider"></div>`;
+        html += `<div class="c-queue-batch-divider">Ожидают запуска</div>`;
     }
-    uncommitted.forEach((item, idx) => { html += renderItem(item, idx, uncommitted); });
+    uncommitted.forEach(item => { html += renderItem(item); });
 
     list.innerHTML = html;
 
@@ -1332,15 +1356,16 @@ function rebuildQueueDOM(fl) {
         handle.addEventListener('pointerdown', onHandlePointerDown);
     });
 
-    const totalCost = fl.reduce((s, i) => s + (i.cells.size * (ROOMS_DB[i.roomType]?.cost || 2)), 0);
+    const totalCost  = all.reduce((s, i) => s + (i.cells.size * (ROOMS_DB[i.roomType]?.cost || 2)), 0);
+    const totalTiles = all.reduce((s, i) => s + i.cells.size, 0);
     total.style.display = '';
     total.innerHTML = `
-        <div class="c-queue-total-line"><span>Тайлов:</span><span>${fl.reduce((s, i) => s + i.cells.size, 0)}</span></div>
+        <div class="c-queue-total-line"><span>Тайлов:</span><span>${totalTiles}</span></div>
         <div class="c-queue-total-line bold"><span>Итого металла:</span><span>${totalCost}</span></div>`;
 }
 
-function tickQueueTimers(fl) {
-    fl.forEach(item => {
+function tickQueueTimers(all) {
+    all.forEach(item => {
         const el = document.querySelector(`.c-queue-item[data-id="${item.id}"]`);
         if (!el) return;
         const rd         = ROOMS_DB[item.roomType]||{};
@@ -1350,10 +1375,11 @@ function tickQueueTimers(fl) {
         const pct        = Math.min(100, Math.round(progress / totalTime * 100));
         const remSec     = Math.ceil((totalTime - progress) / 1000);
 
-        // Пересчёт стоимости и тайлов (исправление бага)
         const cost   = item.cells.size * (rd.cost||2);
+        const isCurrentFloor = item.floor === currentFloor;
+        const floorBadge = `<span class="c-queue-floor-link${isCurrentFloor ? ' current' : ''}" onclick="switchFloor(${item.floor})" title="Перейти на этаж ${item.floor}">🏢 Этаж ${item.floor}</span>`;
         const metaEl = el.querySelector('.c-queue-item-meta');
-        if (metaEl) metaEl.textContent = `${item.cells.size} тайл(ов) • Этаж ${item.floor} • ${cost} металла`;
+        if (metaEl) metaEl.innerHTML = `${item.cells.size} тайл(ов) • ${floorBadge} • ${cost} металла`;
 
         const timerEl   = el.querySelector('.c-queue-item-timer');
         const timerText = el.querySelector('.c-queue-timer');
@@ -1572,8 +1598,8 @@ let buildingState = null;
 let isBuildingActive = false;
 
 function finalizeBuild() {
-    const fl          = buildQueue.filter(i => i.floor === currentFloor);
-    const uncommitted = fl.filter(i => !i.committed);
+    // Commit ALL uncommitted rooms across ALL floors, not just the current floor
+    const uncommitted = buildQueue.filter(i => !i.committed);
     if (!uncommitted.length) return;
 
     // Exit marking/placement mode
@@ -1607,8 +1633,8 @@ function finalizeBuild() {
 }
 
 function startNextBuild() {
-    // Only build committed items, in queue order
-    const item = buildQueue.find(i => i.floor === currentFloor && i.committed);
+    // Build committed items from any floor, in queue order
+    const item = buildQueue.find(i => i.committed);
     if (!item) {
         isBuildingActive = false;
         buildingState    = null;
