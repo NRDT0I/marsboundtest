@@ -161,6 +161,14 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 }
 .c-room-btn:hover { border-color: #3a6faf; background: #111926; }
 .c-room-btn.selected { border-color: #00e5ff; background: #0c1a26; box-shadow: 0 0 8px rgba(0,229,255,0.3); }
+/* X overlay on hover for selected button — shows the player they can click to deselect */
+.c-room-btn.selected:hover::after {
+    content: '✕';
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(220,30,50,0.82); border-radius: 5px;
+    display: block; text-align: center; line-height: 44px;
+    font-size: 16px; color: #fff; font-weight: bold; z-index: 2;
+}
 /* ── Floating room tooltip (rendered at body level, never clipped) ── */
 #roomFloatTooltip {
     position: fixed;
@@ -208,7 +216,7 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 
 /* ── Selected hint upgrade ── */
 .c-selected-hint {
-    position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%);
+    position: absolute; bottom: 64px; left: 50%; transform: translateX(-50%);
     background: rgba(5,10,18,0.95); border: 1px solid #00e5ff; border-radius: 8px;
     padding: 7px 16px; font-size: 12px; color: #7adfff; z-index: 16;
     display: none; white-space: nowrap; backdrop-filter: blur(6px);
@@ -344,24 +352,43 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 }
 .c-queue-item-marking-label { font-size: 11px; color: #00ff88; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
 
-/* Scrollbar */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #2a3f5f; border-radius: 3px; }
 
-/* ── Cancel-selection round button (shown below the selected-hint) ── */
-.c-cancel-sel-btn {
-    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-    width: 32px; height: 32px; border-radius: 50%;
-    background: rgb(26 32 48); border: 2px solid #2bf6ff;
-    color: #fff; font-size: 14px; font-weight: 700;
-    cursor: pointer; z-index: 16;
-    display: none; align-items: center; justify-content: center;
-    transition: all 0.2s; backdrop-filter: blur(6px);
-    box-shadow: 0 0 14px rgba(255,40,60,0.3);
+/* ── Construction-mode floor switcher (left side, mirrors queue on right) ── */
+.c-floor-switcher {
+    position: absolute; left: 10px; top: 112px;
+    width: 44px;
+    background: rgba(10,14,22,0.97); border: 1px solid #2a3f5f; border-radius: 10px;
+    display: none; flex-direction: column; align-items: center;
+    z-index: 15; backdrop-filter: blur(8px); overflow: hidden;
+    padding: 8px 0; gap: 4px;
 }
-.c-cancel-sel-btn.visible { display: flex; }
-.c-cancel-sel-btn:hover { background: rgba(255,40,60,0.95); box-shadow: 0 0 22px rgba(255,40,60,0.55); transform: translateX(-50%) scale(1.08); }
+.c-floor-switcher.visible { display: flex; }
+.c-floor-switcher .c-fs-title {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: #5577aa; text-align: center; padding: 4px 4px 6px;
+    border-bottom: 1px solid #1e2d40; width: 100%; margin-bottom: 4px;
+}
+.c-floor-switcher .level-arrow {
+    width: 28px; height: 24px; background: #2a3040; border: 1px solid #2a3f5f;
+    color: #556; cursor: pointer; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; transition: all 0.2s;
+}
+.c-floor-switcher .level-arrow:hover:not(:disabled) { background: #3a5f8f; color: #fff; }
+.c-floor-switcher .level-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+.c-floor-switcher .c-fs-num {
+    background: #3a5f8f; color: #fff; border-radius: 6px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: bold;
+}
+
+/* ── Cancel-selection round button — HIDDEN (deselect by clicking same room icon) ── */
+.c-cancel-sel-btn { display: none !important; }
 
 /* ── Queue order control (arrows + drag handle column) ── */
 .c-queue-order-ctrl {
@@ -438,6 +465,14 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 
     <!-- Floating room tooltip (lives outside scrolling panel to avoid clipping) -->
     <div id="roomFloatTooltip"></div>
+
+    <!-- Construction floor switcher (left side, visible only in construction mode) -->
+    <div class="c-floor-switcher" id="cFloorSwitcher">
+        <div class="c-fs-title">Этаж</div>
+        <button class="level-arrow" id="cLevelUp">▲</button>
+        <div class="c-fs-num" id="cLevelNumber">1</div>
+        <button class="level-arrow" id="cLevelDown">▼</button>
+    </div>
 
     <!-- Construction: Bottom panel (room type icon buttons) -->
     <div class="c-bottom-panel" id="cBottomPanel"></div>
@@ -738,6 +773,10 @@ function switchFloor(n) {
         document.getElementById('levelNumber').textContent = n;
         document.getElementById('levelUp').disabled   = n>=3;
         document.getElementById('levelDown').disabled = n<=1;
+        // Sync construction floor switcher
+        document.getElementById('cLevelNumber').textContent = n;
+        document.getElementById('cLevelUp').disabled   = n>=3;
+        document.getElementById('cLevelDown').disabled = n<=1;
         renderFloor(n);
         if (isConstruction) drawCGrid();
         setTimeout(() => { ov.classList.remove('active'); isTransitioning=false; }, 400);
@@ -749,14 +788,16 @@ function switchFloor(n) {
 // ════════════════════════════════════════════════════════
 function toggleConstruction() {
     isConstruction = !isConstruction;
-    const isoGrid    = document.getElementById('isoGrid');
-    const gridSvg    = document.getElementById('constructionGridSvg');
-    const bottom     = document.getElementById('cBottomPanel');
-    const right      = document.getElementById('cRightPanel');
-    const inst       = document.getElementById('cInstructions');
-    const closeBtn   = document.getElementById('cCloseBtn');
-    const subTabsBar = document.getElementById('subTabsBar');
-    const fabBtn     = document.getElementById('buildFabBtn');
+    const isoGrid      = document.getElementById('isoGrid');
+    const gridSvg      = document.getElementById('constructionGridSvg');
+    const bottom       = document.getElementById('cBottomPanel');
+    const right        = document.getElementById('cRightPanel');
+    const inst         = document.getElementById('cInstructions');
+    const closeBtn     = document.getElementById('cCloseBtn');
+    const subTabsBar   = document.getElementById('subTabsBar');
+    const fabBtn       = document.getElementById('buildFabBtn');
+    const topBar       = document.querySelector('.top-bar');
+    const floorSwitch  = document.getElementById('cFloorSwitcher');
 
     if (isConstruction) {
         isoGrid.classList.add('construction-active');
@@ -764,9 +805,17 @@ function toggleConstruction() {
         right.classList.add('visible');
         closeBtn.classList.add('visible');
         subTabsBar.style.display = 'none';
+        topBar.style.display = 'none';          // hide nav bar + time controls
+        floorSwitch.classList.add('visible');   // show construction floor switcher
         fabBtn.classList.add('hidden');
         closePanel();
-        
+
+        // Auto-pause time on entering construction/marking mode
+        isPaused = true;
+        clearInterval(timeInterval);
+        document.querySelectorAll('.playback-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('pauseBtn').classList.add('active');
+
         // Ensure room type list is built
         buildRoomListPanel();
         // Reset selection (start with no room chosen)
@@ -775,7 +824,7 @@ function toggleConstruction() {
         updateSelectedHint();
         // Sync panels based on current selection (none)
         updateConstructionPanels();
-        
+
         drawCGrid();
     } else {
         isoGrid.classList.remove('construction-active');
@@ -785,6 +834,8 @@ function toggleConstruction() {
         inst.classList.remove('visible');
         closeBtn.classList.remove('visible');
         subTabsBar.style.display = '';
+        topBar.style.display = '';              // restore nav bar
+        floorSwitch.classList.remove('visible');
         fabBtn.classList.remove('hidden');
         selectedRoomType = null;
         isDragging = isRightDrag = false;
@@ -793,6 +844,13 @@ function toggleConstruction() {
         hideRoomTooltip();
         updateSelectedHint();
         clearPreview();
+
+        // Resume time on exiting construction mode
+        isPaused = false;
+        clearInterval(timeInterval);
+        timeInterval = setInterval(updateTime, 1000);
+        document.querySelectorAll('.playback-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('playBtn').classList.add('active');
     }
 }
 
@@ -809,14 +867,12 @@ function updateConstructionPanels() {
         hint.classList.remove('visible');
         return;
     }
+    // Room panel is ALWAYS visible in construction mode
+    bottom.classList.add('visible');
     if (selectedRoomType) {
-        // Room selected: hide bottom panel, show instructions & hint
-        bottom.classList.remove('visible');
         inst.classList.add('visible');
         // hint visibility handled by updateSelectedHint()
     } else {
-        // No room selected: show bottom panel, hide instructions
-        bottom.classList.add('visible');
         inst.classList.remove('visible');
         hint.classList.remove('visible');
     }
@@ -1532,6 +1588,13 @@ function finalizeBuild() {
     // Commit all pending rooms — they join the build pipeline
     uncommitted.forEach(i => { i.committed = true; });
 
+    // Resume time — building has started, time flows normally again
+    isPaused = false;
+    clearInterval(timeInterval);
+    timeInterval = setInterval(updateTime, 1000);
+    document.querySelectorAll('.playback-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('playBtn').classList.add('active');
+
     // Start building if not already running
     if (!isBuildingActive) {
         isBuildingActive = true;
@@ -1896,6 +1959,11 @@ function updateSelectedHint() {
 
 function selectRoomType(type) {
     hideRoomTooltip();
+    // Clicking the already-selected type deselects it
+    if (selectedRoomType === type) {
+        cancelRoomSelection();
+        return;
+    }
     selectedRoomType = type;
     refreshRoomList();
     updateSelectedHint();
@@ -1944,6 +2012,8 @@ document.querySelectorAll('.layer-btn').forEach(b => {
 
 document.getElementById('levelUp').onclick   = () => { if (currentFloor<3) switchFloor(currentFloor+1); };
 document.getElementById('levelDown').onclick = () => { if (currentFloor>1) switchFloor(currentFloor-1); };
+document.getElementById('cLevelUp').onclick  = () => { if (currentFloor<3) switchFloor(currentFloor+1); };
+document.getElementById('cLevelDown').onclick= () => { if (currentFloor>1) switchFloor(currentFloor-1); };
 
 document.getElementById('isoGrid').addEventListener('click', e => {
     if (!isConstruction && (e.target===e.currentTarget || e.target.id==='roomsContainer' || e.target.id==='allRoomsOverlay'))
