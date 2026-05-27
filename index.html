@@ -360,11 +360,11 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 /* ── Construction-mode floor switcher (left side, mirrors queue on right) ── */
 .c-floor-switcher {
     position: absolute; left: 10px; top: 112px;
-    width: 44px;
+    width: 48px;
     background: rgba(10,14,22,0.97); border: 1px solid #2a3f5f; border-radius: 10px;
     display: none; flex-direction: column; align-items: center;
     z-index: 15; backdrop-filter: blur(8px); overflow: hidden;
-    padding: 8px 0; gap: 4px;
+    padding: 8px 0; gap: 5px;
 }
 .c-floor-switcher.visible { display: flex; }
 .c-floor-switcher .c-fs-title {
@@ -373,18 +373,18 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
     border-bottom: 1px solid #1e2d40; width: 100%; margin-bottom: 4px;
 }
 .c-floor-switcher .level-arrow {
-    width: 28px; height: 24px; background: #2a3040; border: 1px solid #2a3f5f;
+    width: 31px; height: 26px; background: #2a3040; border: 1px solid #2a3f5f;
     color: #556; cursor: pointer; border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; transition: all 0.2s;
+    font-size: 12px; transition: all 0.2s;
 }
 .c-floor-switcher .level-arrow:hover:not(:disabled) { background: #3a5f8f; color: #fff; }
 .c-floor-switcher .level-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
 .c-floor-switcher .c-fs-num {
     background: #3a5f8f; color: #fff; border-radius: 6px;
-    width: 28px; height: 28px;
+    width: 31px; height: 31px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: bold;
+    font-size: 17px; font-weight: bold;
 }
 
 /* ── Cancel-selection round button — HIDDEN (deselect by clicking same room icon) ── */
@@ -986,22 +986,46 @@ function clearPreview() {
     svg.querySelectorAll('.preview-el').forEach(e=>e.remove());
 }
 
-function drawPreview(r1,c1,r2,c2, mode) {
-    // mode: 'add' | 'bad' | 'del'
+function drawPreview(r1, c1, r2, c2, mode) {
+    // mode: 'add' | 'del'
     clearPreview();
     const svg  = document.getElementById('constructionGridSvg');
-    const minR=Math.min(r1,r2), maxR=Math.max(r1,r2);
-    const minC=Math.min(c1,c2), maxC=Math.max(c1,c2);
-    const cls  = mode==='add'?'gc-preview-add': mode==='del'?'gc-preview-del':'gc-preview-bad';
-    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    rect.setAttribute('x',      minC*TILE + 1);
-    rect.setAttribute('y',      minR*TILE + 1);
-    rect.setAttribute('width',  (maxC-minC+1)*TILE - 2);
-    rect.setAttribute('height', (maxR-minR+1)*TILE - 2);
-    rect.setAttribute('class',  cls);
-    rect.setAttribute('pointer-events','none');
-    rect.classList.add('preview-el');
-    svg.appendChild(rect);
+    const minR = Math.min(r1,r2), maxR = Math.max(r1,r2);
+    const minC = Math.min(c1,c2), maxC = Math.max(c1,c2);
+    const occ  = getOccupiedCells();
+    const qmap = getQueueCellMap();
+
+    for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+            const k = `${r},${c}`;
+            let cls;
+            if (mode === 'del') {
+                // Only highlight cells that are actually erasable
+                if (!qmap.has(k)) continue;
+                const item = qmap.get(k);
+                if (selectedRoomType && item.roomType !== selectedRoomType) continue;
+                if (item.committed) continue; // can't erase committed rooms
+                cls = 'gc-preview-del';
+            } else {
+                if (occ.has(k)) {
+                    cls = 'gc-preview-bad'; // physically occupied
+                } else if (qmap.has(k) && qmap.get(k).roomType !== selectedRoomType) {
+                    cls = 'gc-preview-bad'; // different room type in queue — conflict
+                } else {
+                    cls = 'gc-preview-add'; // free or same-type queue (extend/merge)
+                }
+            }
+            const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+            rect.setAttribute('x',      c*TILE + 0.5);
+            rect.setAttribute('y',      r*TILE + 0.5);
+            rect.setAttribute('width',  TILE - 1);
+            rect.setAttribute('height', TILE - 1);
+            rect.setAttribute('class',  cls);
+            rect.setAttribute('pointer-events','none');
+            rect.classList.add('preview-el');
+            svg.appendChild(rect);
+        }
+    }
 
     // Dimensions hint
     const hint = document.getElementById('dragHint');
@@ -1077,23 +1101,22 @@ function updateLmbPreview() {
     if (!dragA || !dragB || !selectedRoomType) return;
     const occ  = getOccupiedCells();
     const qmap = getQueueCellMap();
-    const minR=Math.min(dragA.r,dragB.r), maxR=Math.max(dragA.r,dragB.r);
-    const minC=Math.min(dragA.c,dragB.c), maxC=Math.max(dragA.c,dragB.c);
-    // Check if at least one free cell
-    let hasConflict = false;
-    for (let r=minR;r<=maxR;r++) for (let c=minC;c<=maxC;c++) {
-        const k=`${r},${c}`;
-        if (occ.has(k)) { hasConflict=true; break; }
-    }
-    drawPreview(dragA.r,dragA.c,dragB.r,dragB.c, hasConflict?'bad':'add');
+    const minR = Math.min(dragA.r,dragB.r), maxR = Math.max(dragA.r,dragB.r);
+    const minC = Math.min(dragA.c,dragB.c), maxC = Math.max(dragA.c,dragB.c);
 
-    // Update preview queue item cells
-    if (previewQueueItem && !hasConflict) {
-        previewQueueItem.cells = new Set();
-        for (let r=minR;r<=maxR;r++)
-            for (let c=minC;c<=maxC;c++)
-                if (!occ.has(`${r},${c}`))
-                    previewQueueItem.cells.add(`${r},${c}`);
+    // Per-cell preview (handles bad/add visuals internally)
+    drawPreview(dragA.r, dragA.c, dragB.r, dragB.c, 'add');
+
+    // Count valid cells for the preview queue item (excludes occupied + other-type queue)
+    if (previewQueueItem) {
+        const cells = new Set();
+        for (let r=minR; r<=maxR; r++)
+            for (let c=minC; c<=maxC; c++) {
+                const k = `${r},${c}`;
+                if (!occ.has(k) && !(qmap.has(k) && qmap.get(k).roomType !== selectedRoomType))
+                    cells.add(k);
+            }
+        previewQueueItem.cells = cells;
         updatePreviewUI();
     }
 }
@@ -1157,34 +1180,41 @@ window.addEventListener('contextmenu', e => { if (isConstruction) e.preventDefau
 
 function commitMark() {
     if (!dragA || !selectedRoomType) return;
-    hideRoomTooltip(); // ← добавить
+    hideRoomTooltip();
     const B = dragB || dragA;
     const minR=Math.min(dragA.r,B.r), maxR=Math.max(dragA.r,B.r);
     const minC=Math.min(dragA.c,B.c), maxC=Math.max(dragA.c,B.c);
     const occ  = getOccupiedCells();
+    const qmap = getQueueCellMap();
     const newCells = [];
     for (let r=minR;r<=maxR;r++)
-        for (let c=minC;c<=maxC;c++)
-            if (!occ.has(`${r},${c}`)) newCells.push(`${r},${c}`);
+        for (let c=minC;c<=maxC;c++) {
+            const k=`${r},${c}`;
+            if (occ.has(k)) continue;                                          // physically occupied
+            if (qmap.has(k) && qmap.get(k).roomType !== selectedRoomType) continue; // other type — skip
+            newCells.push(k);
+        }
     if (!newCells.length) return;
 
     const ns = new Set(newCells);
     let merged = false;
     for (const item of buildQueue) {
-        if (item.floor!==currentFloor || item.roomType!==selectedRoomType) continue;
-        // merge if any neighbor
+        if (item.floor !== currentFloor || item.roomType !== selectedRoomType) continue;
+        if (item.committed && buildingState && buildingState.id === item.id) continue; // actively building
+        // merge if adjacent OR if overlap with existing cells
         const adj = [...item.cells].some(k => {
-            const [rr,cc]=k.split(',').map(Number);
-            return [[rr-1,cc],[rr+1,cc],[rr,cc-1],[rr,cc+1]].some(([nr,nc])=>ns.has(`${nr},${nc}`));
+            const [rr,cc] = k.split(',').map(Number);
+            return [[rr-1,cc],[rr+1,cc],[rr,cc-1],[rr,cc+1]].some(([nr,nc]) => ns.has(`${nr},${nc}`));
         });
-        if (adj || [...ns].some(k=>item.cells.has(k))) {
-            newCells.forEach(k=>item.cells.add(k));
+        if (adj || [...ns].some(k => item.cells.has(k))) {
+            newCells.forEach(k => item.cells.add(k));
             merged = true; break;
         }
     }
     if (!merged) {
-        buildQueue.push({ id:Date.now(), floor:currentFloor, roomType:selectedRoomType, cells:ns, committed: false });
+        buildQueue.push({ id:Date.now(), floor:currentFloor, roomType:selectedRoomType, cells:ns, committed:false });
     }
+    _queueDomIds = []; // force full DOM rebuild so tile count refreshes
     updateQueueUI();
     drawCGrid();
 }
@@ -1207,7 +1237,7 @@ function commitErase() {
             }
         if (item.cells.size===0) buildQueue.splice(i,1);
     }
-    if (changed) { updateQueueUI(); drawCGrid(); }
+    if (changed) { _queueDomIds = []; updateQueueUI(); drawCGrid(); }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1237,22 +1267,24 @@ function updateQueueUI() {
     const allUncommitted = buildQueue.filter(i => !i.committed);
     const allCommitted   = buildQueue.filter(i =>  i.committed);
 
-    // Badge shows total queue size across all floors
-    cnt.textContent   = buildQueue.length;
-    cnt.style.display = buildQueue.length ? '' : 'none';
+    // Badge shows only uncommitted (pending) rooms — resets to 0 after Построить
+    cnt.textContent   = allUncommitted.length;
+    cnt.style.display = allUncommitted.length ? '' : 'none';
 
+    // Button state follows exact flow:
+    // • Uncommitted rooms exist → active "Построить (N)", no special color change while building
+    // • Building + no uncommitted → disabled grey "Построить (0)"
+    // • Idle + no uncommitted → disabled grey "Построить (0)"
+    btn.classList.remove('new-batch');
     if (allUncommitted.length) {
-        btn.disabled = false;
+        btn.disabled    = false;
         btn.textContent = `⚙️ Построить (${allUncommitted.length})`;
-        btn.classList.toggle('new-batch', isBuildingActive || allCommitted.length > 0);
     } else if (isBuildingActive) {
-        btn.disabled = true;
-        btn.textContent = '⏳ Строится...';
-        btn.classList.remove('new-batch');
-    } else {
-        btn.disabled = true;
+        btn.disabled    = true;
         btn.textContent = '⚙️ Построить (0)';
-        btn.classList.remove('new-batch');
+    } else {
+        btn.disabled    = true;
+        btn.textContent = '⚙️ Построить (0)';
     }
 }
 
@@ -1406,9 +1438,9 @@ function tickQueueTimers(all) {
 
     // Пересчёт итоговой строки
     const total = document.getElementById('cQueueTotal');
-    if (total && fl.length) {
-        const totalTiles = fl.reduce((s,i) => s + i.cells.size, 0);
-        const totalCost  = fl.reduce((s,i) => s + i.cells.size * (ROOMS_DB[i.roomType]?.cost||2), 0);
+    if (total && all.length) {
+        const totalTiles = all.reduce((s,i) => s + i.cells.size, 0);
+        const totalCost  = all.reduce((s,i) => s + i.cells.size * (ROOMS_DB[i.roomType]?.cost||2), 0);
         total.innerHTML = `
             <div class="c-queue-total-line"><span>Тайлов:</span><span>${totalTiles}</span></div>
             <div class="c-queue-total-line bold"><span>Итого металла:</span><span>${totalCost}</span></div>`;
@@ -1613,6 +1645,10 @@ function finalizeBuild() {
 
     // Commit all pending rooms — they join the build pipeline
     uncommitted.forEach(i => { i.committed = true; });
+
+    // Immediately refresh UI so badge resets to 0 before build starts
+    _queueDomIds = [];
+    updateQueueUI();
 
     // Resume time — building has started, time flows normally again
     isPaused = false;
@@ -1967,7 +2003,7 @@ function updateSelectedHint() {
     if (!hint) return;
     if (selectedRoomType && isConstruction) {
         const v = ROOMS_DB[selectedRoomType];
-        hint.innerHTML = `<span class="hint-mode-icon">🔨</span><span>${v.icon} <strong style="color:#fff">${v.name}</strong> &nbsp;·&nbsp; ЛКМ: разметить &nbsp;·&nbsp; ПКМ: удалить &nbsp;·&nbsp; ПКМ на пустом — снять выбор &nbsp;</span>`;
+        hint.innerHTML = `<span class="hint-mode-icon">🔨</span><span>${v.icon} <strong style="color:#fff">${v.name}</strong> &nbsp;·&nbsp; Удерживать ЛКМ: создать разметку &nbsp;·&nbsp; ПКМ: удалить &nbsp;·&nbsp; ПКМ на пустом — снять выбор &nbsp;</span>`;
         hint.classList.add('visible');
         if (cancelBtn) cancelBtn.classList.add('visible');
         // Set hammer cursor on grid
