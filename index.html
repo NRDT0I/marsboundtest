@@ -3,2115 +3,954 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Base Management – Construction Grid v3</title>
+<title>Древо ИИ v7.3: Плавные анимации</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0d1117; color: #e0e0e0; overflow: hidden; height: 100vh; user-select: none; display: flex; flex-direction: column; }
+  :root {
+    --bg-color: #0a0a1a;
+    --panel-bg: rgba(15, 15, 35, 0.95);
+    --neon-blue: #4488ff;
+    --neon-green: #44ff88;
+    --neon-red: #ff4444;
+    --neon-purple: #ff44ff;
+    --neon-yellow: #ffdd44;
+    --gold: #ffd700;
+    --text-main: #e0e0e0;
+    --text-dim: #8888aa;
+    --border-color: rgba(68, 136, 255, 0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body { background-color: var(--bg-color); color: var(--text-main); font-family: 'Segoe UI', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
 
-/* ── Top Bar ── */
-.top-bar { display: flex; justify-content: space-around; align-items: center; padding: 8px 0; background: #0f1419; border-bottom: 2px solid #2a3f5f; height: 88px; }
-.nav-group { display: flex; align-items: center; background: #1a2030; border-radius: 8px; border: 1px solid #2a3f5f; padding-left: 24px;padding-right: 24px; }
-.main-tab { padding: 8px 16px; background: transparent; border: none; color: #667; cursor: pointer; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; transition: all 0.2s; border-radius: 4px; white-space: nowrap; }
-.main-tab:hover { background: #2a3550; color: #fff; }
-.main-tab.active { background: #3a5f8f; color: #fff; box-shadow: 0 0 8px rgba(58,95,143,0.4); }
-.level-selector { display: flex; flex-direction: column; width: 40px; margin: 0 4px; border: 1px solid #2a3f5f; border-radius: 4px; overflow: hidden; background: #1a2535; }
-.level-arrow { height: 16px; background: #2a3040; border: none; color: #556; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; transition: all 0.2s; }
-.level-arrow:hover:not(:disabled) { background: #3a5f8f; color: #fff; }
-.level-arrow:disabled { opacity: 0.3; cursor: not-allowed; } 
-.level-number { background: #3a5f8f; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; padding: 2px 0; }
-.time-group { display: flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 8px; border-left: 1px solid #2a3f5f; }
-.time-display { font-family: 'Courier New', monospace; font-size: 16px; color: #6a9adf; font-weight: bold; letter-spacing: 1px; background: #1a2535; padding: 6px 10px; border: 1px solid #2a3f5f; border-radius: 4px; }
-.playback-controls { display: flex; gap: 2px; }
-.playback-btn { width: 30px; height: 30px; background: #2a3040; border: 1px solid #2a3f5f; color: #667; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; border-radius: 4px; transition: all 0.2s; }
-.playback-btn:hover { background: #3a4560; color: #fff; }
-.playback-btn.active { background: #3a5f8f; border-color: #4a7fbf; color: #fff; }
+  #header {
+    position: absolute; top: 0; left: 0; right: 0; height: 70px;
+    background: rgba(10, 10, 26, 0.97); border-bottom: 1px solid var(--border-color);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; z-index: 10; font-size: 15px;
+  }
+  .hdr-title { font-weight: bold; font-size: 18px; }
+  .stat-box { display: flex; align-items: center; gap: 8px; }
+  .stat-value { font-family: 'Courier New', monospace; font-weight: bold; color: var(--neon-blue); }
 
-.sub-tabs-bar { display: flex; justify-content: center; padding: 8px 0; background: #0f141c; border-bottom: 1px solid #1a2035; }
-.sub-tabs-row { display: flex; align-items: center; gap: 4px; background: #1a2030; border-radius: 6px; border: 1px solid #2a3f5f; padding: 4px; }
-.sub-sep { width: 1px; height: 24px; background: #2a3f5f; margin: 0 4px; }
+  #header-resources {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    text-align: center; background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border-color); border-radius: 8px;
+    padding: 6px 18px; min-width: 240px;
+  }
+  .hud-row { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 13px; }
+  .hud-row .stat-value { font-size: 15px; }
+  .hud-row.tf .stat-value { color: var(--neon-yellow); }
+  .hud-row.points { margin-top: 4px; font-size: 12px; color: var(--text-dim); }
+  .hud-row.points .stat-value { color: var(--neon-green); font-size: 14px; }
+  .hud-bar { height: 6px; width: 210px; background: #1a1a3e; border-radius: 4px; margin: 4px auto 2px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+  #hud-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-blue)); transition: width 0.3s; }
+  .hud-bar-segments { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(0,0,0,0.55) calc(10% - 1px) 10%); }
 
-/* ── Main Canvas ── */
-.main-canvas { position: relative; flex: 1; min-height: 0; background: radial-gradient(ellipse at center, #161d2a 0%, #0d1117 100%); overflow: hidden; display: flex; align-items: center; justify-content: center; }
-.iso-grid { position: relative; width: 1100px; height: 600px; transition: opacity 0.4s ease, transform 0.4s ease; }
+  #canvas-container { position: absolute; top: 70px; left: 0; bottom: 0; right: 0; cursor: grab; }
+  #canvas-container:active { cursor: grabbing; }
+  canvas { display: block; }
 
-/* ── Iso Blocks ── */
-.iso-block { position: absolute; cursor: pointer; transition: all 0.3s; z-index: 2; }
-.iso-block:hover { transform: scale(1.05); filter: brightness(1.15); }
-.iso-block.selected { filter: brightness(1.25); }
-.iso-block.is-lift .block-svg { filter: drop-shadow(0 0 15px rgba(106,154,223,0.3)); }
-.block-svg { width: 180px; height: 150px; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3)); }
-.block-top  { fill: #4a7aaa; stroke: #3a6a9a; stroke-width: 1.5; }
-.block-front{ fill: #3a6a9a; stroke: #2a5a8a; stroke-width: 1.5; }
-.block-side { fill: #2a5a8a; stroke: #1a4a7a; stroke-width: 1.5; }
-.block-edge { fill: #1a4a7a; stroke: #0a3a6a; stroke-width: 1; }
-.block-icon  { font-size: 32px; text-anchor: middle; dominant-baseline: central; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
-.block-label { font-size: 12px; fill: #fff; text-anchor: middle; dominant-baseline: central; font-weight: 600; }
-.block-label.lift-label { font-size: 10px; font-weight: 700; fill: #6a9adf; }
-.status-dot { position: absolute; top: 10px; right: 20px; width: 8px; height: 8px; border-radius: 50%; z-index: 3; }
-.status-dot.online  { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
-.status-dot.warning { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
-.status-dot.offline { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
-.lift-pulse { position: absolute; top: 8px; right: 16px; width: 14px; height: 14px; border-radius: 50%; background: rgba(106,154,223,0.3); animation: liftPulse 2s infinite; z-index: 2; }
-@keyframes liftPulse { 0%,100% { opacity:0.3; transform:scale(1); } 50% { opacity:0; transform:scale(2); } }
-.corridors-svg { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 1; }
-.corridor-line { stroke: #3a5f7f; stroke-width: 4; fill: none; stroke-linecap: round; stroke-dasharray: 6 3; opacity: 0.6; }
-
-/* ── Detail Panel ── */
-.detail-panel { position: absolute; left: 20px; bottom: 150px; width: 300px; background: rgba(15,20,25,0.97); border: 1px solid #2a3f5f; border-radius: 12px; z-index: 20; display: none; backdrop-filter: blur(10px); overflow: hidden; }
-.detail-panel.visible { display: block; animation: slideIn 0.3s ease; }
-@keyframes slideIn { from { opacity:0; transform:translateX(-30px); } to { opacity:1; transform:translateX(0); } }
-.panel-header { background: linear-gradient(135deg, #1a2535 0%, #0f1419 100%); padding: 16px 20px; border-bottom: 1px solid #2a3f5f; display: flex; align-items: center; justify-content: space-between; }
-.panel-header-left { display: flex; align-items: center; gap: 10px; }
-.panel-icon { font-size: 28px; }
-.panel-title { font-size: 16px; font-weight: 600; color: #6a9adf; }
-.panel-subtitle { font-size: 11px; color: #556; margin-top: 2px; }
-.panel-close { width:28px; height:28px; background:transparent; border:1px solid #2a3f5f; color:#667; cursor:pointer; border-radius:6px; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
-.panel-close:hover { background:#2a3550; color:#fff; }
-.panel-body { padding: 16px 20px; overflow-y: auto; max-height: 300px; }
-.panel-section { margin-bottom: 16px; }
-.panel-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #556; margin-bottom: 10px; }
-.panel-stats { display: flex; flex-direction: column; gap: 6px; }
-.panel-stat { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 4px 0; }
-.panel-stat .label { color: #889; }
-.panel-stat .value { color: #6a9adf; font-weight: 600; }
-.floor-list { display: flex; flex-direction: column; gap: 6px; }
-.floor-option { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #1a2030; border: 1px solid #2a3f5f; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-.floor-option:hover:not(.current) { background: #2a3550; border-color: #3a5f8f; transform: translateX(4px); }
-.floor-option.current { background: #1a2535; border-color: #3a5f8f; cursor: default; opacity: 0.7; }
-.floor-option .floor-num { width:36px; height:36px; background:#2a3550; border:1px solid #3a5f8f; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:#6a9adf; flex-shrink:0; }
-.floor-option.current .floor-num { background: #3a5f8f; color: #fff; }
-.floor-option .floor-info { flex: 1; }
-.floor-option .floor-name { font-size: 14px; font-weight: 600; color: #e0e0e0; }
-.floor-option .floor-desc { font-size: 11px; color: #667; margin-top: 2px; }
-.floor-option .floor-badge { font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
-.floor-option.current .floor-badge { background: rgba(74,222,128,0.15); color: #4ade80; }
-.floor-option .floor-arrow { font-size: 16px; color: #3a5f8f; transition: all 0.2s; }
-.floor-option:hover:not(.current) .floor-arrow { color: #6a9adf; transform: translateX(3px); }
-.panel-actions { display: flex; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #2a3f5f; }
-.panel-btn { flex:1; padding:8px; background:#1a2535; border:1px solid #2a3f5f; color:#889; cursor:pointer; border-radius:6px; font-size:12px; transition:all 0.2s; }
-.panel-btn:hover { background: #2a3550; color: #fff; border-color: #3a5f8f; }
-.panel-btn.primary { background: #2a4f7f; color: #fff; border-color: #3a6faf; }
-
-/* ── Floor Transition ── */
-.floor-overlay { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(10,14,20,0.92); z-index:30; display:none; flex-direction:column; align-items:center; justify-content:center; gap:12px; backdrop-filter:blur(4px); }
-.floor-overlay.active { display: flex; }
-.transition-icon { font-size: 48px; animation: bounce 0.6s ease infinite alternate; }
-@keyframes bounce { from { transform:translateY(0); } to { transform:translateY(-12px); } }
-.transition-text { font-size: 16px; color: #6a9adf; font-weight: 600; letter-spacing: 1px; }
-
-/* ── Layer buttons (now in sub-tabs bar) ── */
-.bottom-layers { display:flex; gap:6px; padding:0; background: transparent; z-index:10; }
-
-.layer-btn { width:36px; height:36px; background:#1a2535; border:1px solid #2a3f5f; color:#556; cursor:pointer; border-radius:6px; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; position:relative; }
-.layer-btn:hover { background: #2a3550; color: #fff; }
-.layer-btn.active { background: #2a4f7f; border-color: #3a6faf; color: #fff; box-shadow: 0 0 8px rgba(42,79,127,0.3); }
-.layer-tooltip { position:absolute; top:110%; left:50%; transform:translateX(-50%); background:#0f1419; color:#fff; padding:4px 10px; border-radius:4px; font-size:11px; white-space:nowrap; border:1px solid #3a5f8f; display:none; }
-.layer-btn:hover .layer-tooltip { display: block; }
-
-/* ══════════════════════════════════════
-   CONSTRUCTION SYSTEM
-══════════════════════════════════════ */
-
-/* Construction SVG grid overlay */
-#constructionGridSvg {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 1;
-    pointer-events: none;
+  #ability-panel {
+    position: absolute;
+    top: 85px;
+    bottom: 20px;
+    right: 20px;
+    width: 390px;
+    background: var(--panel-bg);
+    border: 1px solid var(--neon-blue);
+    border-radius: 8px;
+    z-index: 20;
     display: none;
-}
-#constructionGridSvg.active {
-    pointer-events: auto;
-    display: block;
-}
+    flex-direction: column;
+    box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 15px rgba(68, 136, 255, 0.1);
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+  }
+  #ability-panel.open { display: flex; }
+  #ability-panel.core-panel { border-color: var(--gold); box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 25px rgba(255, 215, 0, 0.3); }
+  #ability-panel.cross-panel { border-image: linear-gradient(135deg, var(--neon-red), var(--neon-yellow)) 1; box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 20px rgba(255, 68, 255, 0.2); }
+  
+  .panel-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; flex-shrink: 0; }
+  .panel-title { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 5px; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+  .badge-passive { background: rgba(68, 255, 136, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
+  .badge-active { background: rgba(255, 68, 255, 0.2); color: var(--neon-purple); border: 1px solid var(--neon-purple); }
+  .badge-amoral { background: rgba(255, 68, 68, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
+  .badge-chaotic { background: rgba(255, 221, 68, 0.2); color: var(--neon-yellow); border: 1px solid var(--neon-yellow); }
+  .badge-foreign { background: rgba(255, 68, 68, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
+  .badge-core { background: linear-gradient(135deg, var(--gold), #b8860b); color: #000; border: 1px solid var(--gold); }
+  .badge-locked { background: rgba(100, 100, 100, 0.3); color: #888; border: 1px solid #555; }
+  .badge-cross { background: linear-gradient(135deg, rgba(255,68,68,0.3), rgba(255,221,68,0.3)); color: #fff; border: 1px solid var(--neon-purple); }
+  .badge-inactive { background: rgba(255, 221, 68, 0.2); color: var(--neon-yellow); border: 1px solid var(--neon-yellow); }
 
-/* Grid cell states */
-.gc-bg     { fill: #0e1824; }
-.gc-neutral { fill: rgba(30,60,100,0.15); stroke: rgba(100,160,220,0.25); stroke-width: 0.8; }
-.gc-free    { fill: rgba(0,220,100,0.13); stroke: rgba(0,200,80,0.5); stroke-width: 1; animation: pulseGreen 2s infinite; }
-.gc-blocked { fill: rgba(240,60,60,0.28); stroke: rgba(220,60,60,0.7); stroke-width: 1; }
-.gc-queue   { fill: rgba(255,170,0,0.28); stroke: rgba(255,170,0,0.8); stroke-width: 1.2; stroke-dasharray: 4 2; }
-.gc-queue-other { fill: rgba(160,50,50,0.45); stroke: rgba(180,60,60,0.8); stroke-width: 1; }
-.gc-preview-add { fill: rgba(0,220,100,0.38); stroke: rgba(0,255,100,0.9); stroke-width: 1.5; }
-.gc-preview-bad { fill: rgba(255,40,40,0.30); stroke: rgba(255,40,40,0.8); stroke-width: 1.5; }
-.gc-preview-del { fill: rgba(255,80,0,0.35); stroke: rgba(255,120,0,0.9); stroke-width: 1.5; stroke-dasharray: 4 2; }
-@keyframes pulseGreen { 0%,100%{fill:rgba(0,220,100,0.10);} 50%{fill:rgba(0,220,100,0.22);} }
+  .panel-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px 20px;
+    min-height: 0;
+  }
+  .panel-scroll::-webkit-scrollbar { width: 6px; }
+  .panel-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+  .panel-scroll::-webkit-scrollbar-thumb { background: rgba(68,136,255,0.4); border-radius: 3px; }
+  .panel-scroll::-webkit-scrollbar-thumb:hover { background: rgba(68,136,255,0.7); }
 
-.gc-room-icon { font-size: 26px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
-.gc-room-icon.active   { filter: drop-shadow(0 0 5px rgba(255,170,0,0.8)); fill: #ffee88; }
-.gc-room-icon.inactive { filter: drop-shadow(0 0 5px rgba(200,60,60,0.7)); fill: #ff9999; }
+  .panel-footer {
+    padding: 12px 20px 18px;
+    border-top: 1px solid var(--border-color);
+    background: rgba(10, 10, 26, 0.6);
+    flex-shrink: 0;
+    max-height: 55vh;
+    overflow-y: auto;
+  }
+  .panel-footer::-webkit-scrollbar { width: 6px; }
+  .panel-footer::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+  .panel-footer::-webkit-scrollbar-thumb { background: rgba(68,136,255,0.4); border-radius: 3px; }
 
-/* Drag dimensions hint */
-.drag-hint { position:absolute; background:rgba(0,0,0,0.75); color:#0f0; font-family:monospace; font-size:13px; padding:4px 10px; border-radius:4px; pointer-events:none; z-index:40; display:none; white-space:nowrap; }
+  /* НОВОЕ: плавные анимации для блоков */
+  .block { margin-bottom: 14px; transition: opacity 0.3s, max-height 0.3s; }
+  .block.hidden { opacity: 0; max-height: 0; overflow: hidden; margin: 0; }
+  .block-title { font-size: 12px; text-transform: uppercase; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 3px; }
 
-/* ── Bottom room panel (icon-only square buttons) ── */
-.c-panel-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #5577aa; padding: 12px 14px 8px; border-bottom: 1px solid #1e2d40; flex-shrink: 0; }
-.c-bottom-panel {
-    position: absolute; bottom: 0px; left: 50%; transform: translateX(-50%);
-    display: none; align-items: center; gap: 4px;
-    background: rgba(10,14,22,0.95); border: 1px solid #2a3f5f; border-radius: 10px;
-    padding: 6px 10px; z-index: 15; backdrop-filter: blur(8px);
-    flex-wrap: nowrap; max-width: calc(100% - 40px); overflow-x: auto;
-}
-.c-bottom-panel.visible { display: flex; }
-.c-room-btn {
-    width: 44px; height: 44px; border-radius: 6px; border: 1px solid #1e2d40;
-    background: #0c1018; cursor: pointer; transition: all .18s;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; position: relative; flex-shrink: 0;
-}
-.c-room-btn:hover { border-color: #3a6faf; background: #111926; }
-.c-room-btn.selected { border-color: #00e5ff; background: #0c1a26; box-shadow: 0 0 8px rgba(0,229,255,0.3); }
-/* X overlay on hover for selected button — shows the player they can click to deselect */
-.c-room-btn.selected:hover::after {
-    content: '✕';
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(220,30,50,0.82); border-radius: 5px;
-    display: block; text-align: center; line-height: 44px;
-    font-size: 16px; color: #fff; font-weight: bold; z-index: 2;
-}
-/* ── Floating room tooltip (rendered at body level, never clipped) ── */
-#roomFloatTooltip {
-    position: fixed;
-    background: #080f1a; border: 1px solid #3a6faf; border-radius: 8px;
-    padding: 10px 13px; font-size: 11px; color: #cce;
-    pointer-events: none; /* never intercepts mouse — show/hide is purely driven by the button */
-    z-index: 9999;
-    display: flex; flex-direction: column; gap: 4px; min-width: 190px; max-width: 230px;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,229,255,0.08);
-    opacity: 0; visibility: hidden;
-    transition: opacity 0.12s ease, visibility 0.12s;
-}
-#roomFloatTooltip.visible { opacity: 1; visibility: visible; }
-/* Arrow — points DOWN toward button (default); flipped class points UP */
-#roomFloatTooltip::after {
-    content: ''; position: absolute; top: 100%; left: var(--arrow-left, 50%);
-    transform: translateX(-50%);
-    border: 6px solid transparent; border-top-color: #3a6faf;
-}
-#roomFloatTooltip.flipped::after {
-    top: auto; bottom: 100%;
-    border-top-color: transparent; border-bottom-color: #3a6faf;
-}
-#roomFloatTooltip .tt-name { font-weight: 700; color: #eef; font-size: 13px; letter-spacing: 0.3px; }
-#roomFloatTooltip .tt-desc { color: #8899bb; font-size: 10px; line-height: 1.5; white-space: normal; margin: 1px 0; }
-#roomFloatTooltip .tt-divider { height: 1px; background: #1e2d40; margin: 3px 0; }
-#roomFloatTooltip .tt-cost { color: #ffcc55; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
-#roomFloatTooltip .tt-cost::before { content: '🔩'; font-size: 12px; }
-#roomFloatTooltip .tt-effects { color: #5a9aaf; font-size: 10px; margin-top: 2px; line-height: 1.6; display: flex; flex-wrap: wrap; gap: 4px; }
-#roomFloatTooltip .tt-fx-tag { background: rgba(58,95,143,0.3); border: 1px solid #2a4060; border-radius: 3px; padding: 1px 5px; color: #7abcdf; font-size: 9px; }
+  .requirements-box { 
+    background: rgba(255, 68, 68, 0.08); 
+    border: 1px solid rgba(255, 68, 68, 0.4); 
+    border-radius: 6px; 
+    padding: 10px 12px; 
+    margin-bottom: 10px;
+    transition: opacity 0.3s, max-height 0.3s;
+  }
+  .requirements-box.hidden { opacity: 0; max-height: 0; padding: 0; overflow: hidden; margin: 0; border: none; }
+  .requirements-box .req-title { color: var(--neon-red); font-weight: bold; font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  .requirements-box.all-met { background: rgba(68, 255, 136, 0.08); border-color: rgba(68, 255, 136, 0.4); }
+  .requirements-box.all-met .req-title { color: var(--neon-green); }
+  .req-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #ccc; margin-bottom: 3px; }
+  .req-item.met { color: var(--neon-green); }
+  .req-item.unmet { color: var(--neon-red); }
 
-/* ── Hammer cursor when placement mode active ── */
-#constructionGridSvg.placement-mode {
-    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36'><text y='30' font-size='28'>🔨</text></svg>") 6 30, crosshair;
-}
-#constructionGridSvg.placement-mode.erasing {
-    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36'><text y='30' font-size='28'>🧹</text></svg>") 6 30, crosshair;
-}
+  .progress-container { background: #1a1a3e; height: 10px; border-radius: 5px; overflow: hidden; margin: 6px 0; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); width: 0%; transition: width 0.5s ease-out; }
+  .progress-bar.frozen { background: #555; }
+  .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); }
+  
+  .btn-accelerate { 
+    width: 100%; margin-top: 6px; padding: 6px; 
+    background: rgba(255, 221, 68, 0.2); border: 1px solid var(--neon-yellow); 
+    color: var(--neon-yellow); border-radius: 4px; cursor: pointer; font-size: 12px;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .btn-accelerate:hover { background: rgba(255, 221, 68, 0.4); }
+  .btn-accelerate.hidden { opacity: 0; pointer-events: none; transform: translateY(-5px); }
 
-/* ── Placement mode grid glow border ── */
-#constructionGridSvg.placement-mode {
-    outline: none;
-    filter: drop-shadow(0 0 6px rgba(0,229,255,0.25));
-}
+  .effect-desc { font-size: 13px; line-height: 1.5; color: #ccc; margin-bottom: 10px; }
+  .effect-row { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
+  .effect-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .effect-label { font-size: 13px; color: #ddd; font-weight: 500; }
+  .effect-current { font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; color: var(--neon-green); }
+  .effect-current.negative { color: var(--neon-red); }
+  .effect-current.percent { color: var(--neon-yellow); }
+  .effect-formula { font-size: 11px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; }
+  .effect-next { color: var(--neon-blue); font-weight: bold; font-size: 11px; }
+  .effect-maxed { color: var(--neon-green); font-weight: bold; font-size: 11px; }
+  
+  .cooldown-box { 
+    margin: 8px 0; padding: 8px; 
+    background: rgba(255,255,255,0.05); border-radius: 4px; 
+    display: flex; justify-content: space-between; align-items: center;
+    transition: opacity 0.3s, max-height 0.3s;
+  }
+  .cooldown-box.hidden { opacity: 0; max-height: 0; padding: 0; overflow: hidden; margin: 0; }
+  .frozen-badge { background: var(--neon-blue); color: #000; font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: bold; display: none; }
+  .frozen-badge.visible { display: inline-block; }
 
-/* ── Selected hint upgrade ── */
-.c-selected-hint {
-    position: absolute; bottom: 64px; left: 50%; transform: translateX(-50%);
-    background: rgba(5,10,18,0.95); border: 1px solid #00e5ff; border-radius: 8px;
-    padding: 7px 16px; font-size: 12px; color: #7adfff; z-index: 16;
-    display: none; white-space: nowrap; backdrop-filter: blur(6px);
-    pointer-events: none; box-shadow: 0 0 16px rgba(0,229,255,0.15);
-    animation: hintPulse 2.5s ease-in-out infinite;
-}
-@keyframes hintPulse {
-    0%, 100% { border-color: #00e5ff; box-shadow: 0 0 10px rgba(0,229,255,0.15); }
-    50%       { border-color: #40ffff; box-shadow: 0 0 20px rgba(0,229,255,0.35); }
-}
-.c-selected-hint.visible { display: flex; align-items: center; gap: 8px; }
-.c-selected-hint .hint-mode-icon { font-size: 16px; }
-/* .c-selected-hint is defined above with enhanced styles */
+  .rule-hint { font-size: 11px; color: var(--neon-red); margin-top: 5px; display: none; }
+  .rule-hint.visible { display: block; }
 
-/* ── Right panel (queue) ── */
-.c-right-panel {
-    position: absolute; right: 10px; top: 112px; width: 280px;
-    background: rgba(10,14,22,0.97); border: 1px solid #2a3f5f; border-radius: 10px;
-    display: none; flex-direction: column; z-index: 15; backdrop-filter: blur(8px);
-    overflow: hidden; max-height: calc(100% - 20px);
-}
-.c-right-panel.visible { display: flex; }
-.c-queue-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
-.c-queue-item { background: #0c1018; border: 1px solid #2a3040; border-left: 3px solid #ffaa33; border-radius: 6px; padding: 10px 10px 10px 32px; font-size: 13px; position: relative; transition: opacity 0.2s; user-select: none; }
-.c-queue-item.dragging-item { opacity: 0.3; }
-.c-queue-item.drag-insert-before { box-shadow: 0 -3px 0 0 #00e5ff; }
-.c-queue-item.drag-insert-after  { box-shadow: 0  3px 0 0 #00e5ff; }
-.c-queue-item.building { border-left-color: #00e5ff; }
+  /* НОВОЕ: плавные предупреждения */
+  .inactive-warning, .destab-warning, .cross-note { 
+    padding: 8px; border-radius: 4px; font-size: 12px; margin-bottom: 12px; text-align: center;
+    transition: opacity 0.3s, max-height 0.3s;
+  }
+  .inactive-warning { background: rgba(255, 221, 68, 0.1); border: 1px solid var(--neon-yellow); color: var(--neon-yellow); }
+  .destab-warning { background:rgba(255,68,68,0.1); border:1px solid var(--neon-red); color:var(--neon-red); }
+  .cross-note { background:rgba(255,68,255,0.08); border:1px solid var(--neon-purple); color:var(--neon-purple); }
+  .inactive-warning.hidden, .destab-warning.hidden, .cross-note.hidden { 
+    opacity: 0; max-height: 0; padding: 0; overflow: hidden; margin: 0; border: none;
+  }
 
-/* ── Batch divider ── */
-.c-queue-batch-divider {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
-    color: #ffaa33; padding: 2px 4px; flex-shrink: 0;
-}
-.c-queue-batch-divider::before,
-.c-queue-batch-divider::after {
-    content: ''; flex: 1; height: 1px; background: #ffaa3355;
-}
+  .tf-slider { position: relative; padding: 0 34px; margin: 10px 4px 4px; touch-action: none; cursor: pointer; }
+  .tf-slider.disabled { opacity: 0.45; pointer-events: none; }
+  .tf-area { position: relative; height: 84px; }
+  .tf-slider-track { position: absolute; left: 0; right: 0; top: 36px; height: 6px; background: #1a1a3e; border-radius: 3px; border: 1px solid rgba(255,255,255,0.08); }
+  .tf-slider-fill { position: absolute; left: 0; top: 36px; height: 6px; background: linear-gradient(90deg, var(--neon-green), var(--neon-blue)); border-radius: 3px; transition: width 0.3s; }
+  .tf-stop { position: absolute; top: 0; width: 68px; transform: translateX(-50%); text-align: center; }
+  .tf-stop-notch { position: absolute; left: 50%; top: 33px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #333; border: 2px solid #555; z-index: 1; transition: all 0.3s; }
+  .tf-stop.current .tf-stop-notch { background: var(--neon-green); border-color: var(--neon-green); box-shadow: 0 0 6px rgba(68,255,136,0.7); }
+  .tf-stop.locked .tf-stop-notch { background: #222; border-color: #3a3a3a; }
+  /* НОВОЕ: подсветка доступного уровня */
+  .tf-stop.available .tf-stop-notch { 
+    background: var(--gold); 
+    border-color: var(--gold); 
+    box-shadow: 0 0 10px rgba(255,215,0,0.8);
+    animation: pulse-gold 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.8); transform: scale(1); }
+    50% { box-shadow: 0 0 20px rgba(255,215,0,1); transform: scale(1.2); }
+  }
+  .tf-stop-lvl { position: absolute; top: 8px; width: 100%; font-size: 12px; font-weight: bold; color: #ddd; }
+  .tf-stop-cost { position: absolute; top: 52px; width: 100%; font-size: 10px; color: var(--neon-yellow); font-family: 'Courier New', monospace; white-space: nowrap; }
+  .tf-stop-cost .old { text-decoration: line-through; opacity: 0.6; color: var(--text-dim); margin-right: 2px; }
+  .tf-stop.locked .tf-stop-lvl, .tf-stop.locked .tf-stop-cost { color: #555; }
+  .tf-slider-handle {
+    position: absolute; top: 30px; width: 18px; height: 18px; margin-left: -9px;
+    border-radius: 50%; background: #fff; border: 3px solid var(--neon-blue);
+    box-shadow: 0 0 10px rgba(68,136,255,0.8); cursor: grab; z-index: 2;
+    transition: left 0.3s ease-out;
+  }
+  .tf-slider-handle:active { cursor: grabbing; }
 
-/* ── Build btn new-batch state ── */
-.c-build-btn.new-batch {
-    background: linear-gradient(135deg, #ffaa33, #cc7700);
-    color: #000;
-}
-.c-build-btn.new-batch:hover { filter: brightness(1.12); }
-.c-queue-drag-handle { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#44445E; font-size:14px; cursor:grab; line-height:1; padding:4px 2px; border-radius:3px; transition:color .15s; }
-.c-queue-drag-handle:hover { color:#6a9adf; background:rgba(106,154,223,0.1); }
-.c-queue-drag-handle:active { cursor:grabbing; }
-.c-queue-item-name { font-weight: 700; color: #dde; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; padding-right: 22px; font-size: 15px; }
-.c-queue-item-meta { font-size: 12px; color: #556; }
-.c-queue-timer { font-size: 12px; color: #00e5ff; margin-top: 4px; }
-.c-queue-cancel { position:absolute; top:7px; right:8px; width:20px; height:20px; border-radius:50%; border:none; background:#2a3040; color:#889; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .18s; }
-.c-queue-cancel:hover { background: #ff4455; color: #fff; }
-.c-queue-empty { text-align:center; color:#446; padding:20px 10px; font-size:12px; }
-.c-queue-progress { height: 3px; background: #1a2a3a; border-radius: 2px; margin-top: 5px; overflow: hidden; }
-.c-queue-progress-bar { height: 100%; background: linear-gradient(90deg, #00e5ff, #0088cc); border-radius: 2px; transition: width 0.4s linear; }
-.c-queue-total { padding: 10px 14px; border-top: 1px solid #1e2d40; font-size: 13px; background: #0c1018; flex-shrink: 0; }
-.c-queue-total-line { display:flex; justify-content:space-between; margin-bottom:4px; }
-.c-queue-total-line.bold { font-weight:700; color:#00e5ff; border-top:1px solid #1e2d40; padding-top:6px; margin-top:4px; }
-.c-build-btn { margin:10px; padding:13px; border-radius:6px; border:none; background:linear-gradient(135deg,#00e5ff,#0088cc); color:#000; font-weight:700; cursor:pointer; font-size:14px; flex-shrink:0; }
-.c-build-btn:hover { filter: brightness(1.12); }
-.c-build-btn:disabled { background:#333; color:#666; cursor:not-allowed; }
+  .btn-action { 
+    width: 100%; padding: 10px; 
+    background: var(--neon-purple); color: white; 
+    border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 4px; font-size: 14px;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .btn-action:disabled { background: #333; color: #666; cursor: not-allowed; }
+  .btn-action.hidden { opacity: 0; pointer-events: none; transform: translateY(-5px); }
+  .btn-unlock { 
+    width: 100%; padding: 10px; 
+    background: var(--neon-blue); color: white; 
+    border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 0; font-size: 14px;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .btn-unlock:disabled { background: #333; color: #666; cursor: not-allowed; }
+  .btn-unlock.hidden { opacity: 0; pointer-events: none; transform: translateY(-5px); }
 
-/* ── Instructions ── */
-.c-instructions {
-    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: rgba(5,10,18,0.92); border: 1px solid #2a4060; border-radius: 8px;
-    padding: 8px 8px; font-size: 12px; color: #7a9abb; z-index: -1;
-    display: none; white-space: nowrap; backdrop-filter: blur(6px);
-}
-.c-instructions.visible { display: block; }
+  .close-panel { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 20px; line-height: 1; }
+  .close-panel:hover { color: #fff; }
 
-/* ── Close button ── */
-.c-close-btn {
-    position: absolute; top: 10px; right: 10px;
-    width: 32px; height: 32px; background: #1a2535; border: 1px solid #3a5f8f;
-    color: #e0e4e8; cursor: pointer; border-radius: 6px; font-size: 16px;
-    display: none; align-items: center; justify-content: center; z-index: 30;
-    transition: all 0.2s;
-}
-.c-close-btn.visible { display: flex; }
-.c-close-btn:hover { background: #2a3550; border-color: #00e5ff; color: #fff; }
+  #notifications { position: absolute; top: 80px; left: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 50; }
+  .notification { background: var(--panel-bg); border-left: 4px solid var(--neon-blue); padding: 12px 16px; border-radius: 4px; min-width: 280px; font-size: 13px; animation: slideIn 0.3s ease-out; }
+  .notification.warning { border-color: var(--neon-yellow); }
+  .notification.error { border-color: var(--neon-red); }
+  .notification.success { border-color: var(--neon-green); }
+  @keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* When construction active — disable pointer events and dim existing rooms */
-.construction-active .iso-block { pointer-events: none; opacity: 0.87; filter: brightness(0.8); }
-.construction-active #allRoomsOverlay { opacity: 0.5; pointer-events: none; }
-
-/* ── Build FAB button (bottom-left corner) ── */
-.build-fab-btn {
-    position: absolute; bottom: 0px; place-self: center;
-    width: 164px; height: 56px;
-    background: linear-gradient(145deg, #1a3a5f 0%, #1e4f8a 50%, #2a6faf 100%);
-    border: 2px solid #3a7fbf;
-    border-radius: 14px;
-    color: #c8e4ff;
-    cursor: pointer;
-    display: flex; flex-direction: row;
-    align-items: center; justify-content: center;
-    gap: 5px;
-    z-index: 10;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.6),
-                0 0 0 1px rgba(58,127,191,0.3),
-                inset 0 1px 0 rgba(255,255,255,0.08);
-    transition: all 0.2s ease;
-    letter-spacing: 0.6px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-.build-fab-btn:hover {
-    background: linear-gradient(145deg, #254f7f 0%, #2a6faf 50%, #3a8fcf 100%);
-    border-color: #5aafef;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 20px rgba(58,127,191,0.5),
-                inset 0 1px 0 rgba(255,255,255,0.12);
-    transform: translateY(-2px);
-    color: #e8f4ff;
-}
-.build-fab-btn:active { transform: translateY(0); box-shadow: 0 3px 12px rgba(0,0,0,0.5); }
-.build-fab-btn .fab-icon { font-size: 36px; line-height: 1; }
-.build-fab-btn .fab-label { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.2; opacity: 0.9; }
-.build-fab-btn.hidden { display: none; }
-
-/* ── Marking status queue item ── */
-.c-queue-item.marking {
-    border-left-color: #00ff88;
-    border-color: rgba(0,255,136,0.5);
-    border-style: dashed;
-    background: rgba(0,40,20,0.6);
-    animation: markingPulse 1.2s ease-in-out infinite;
-}
-@keyframes markingPulse {
-    0%, 100% { border-color: rgba(0,255,136,0.5); box-shadow: 0 0 8px rgba(0,255,136,0.15); }
-    50%       { border-color: rgba(0,255,136,0.9); box-shadow: 0 0 16px rgba(0,255,136,0.35); }
-}
-.c-queue-item-marking-label { font-size: 11px; color: #00ff88; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2a3f5f; border-radius: 3px; }
-
-/* ── Construction-mode floor switcher (left side, mirrors queue on right) ── */
-.c-floor-switcher {
-    position: absolute; left: 10px; top: 112px;
-    width: 48px;
-    background: rgba(10,14,22,0.97); border: 1px solid #2a3f5f; border-radius: 10px;
-    display: none; flex-direction: column; align-items: center;
-    z-index: 15; backdrop-filter: blur(8px); overflow: hidden;
-    padding: 8px 0; gap: 5px;
-}
-.c-floor-switcher.visible { display: flex; }
-.c-floor-switcher .c-fs-title {
-    font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px;
-    color: #5577aa; text-align: center; padding: 4px 4px 6px;
-    border-bottom: 1px solid #1e2d40; width: 100%; margin-bottom: 4px;
-}
-.c-floor-switcher .level-arrow {
-    width: 31px; height: 26px; background: #2a3040; border: 1px solid #2a3f5f;
-    color: #556; cursor: pointer; border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; transition: all 0.2s;
-}
-.c-floor-switcher .level-arrow:hover:not(:disabled) { background: #3a5f8f; color: #fff; }
-.c-floor-switcher .level-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
-.c-floor-switcher .c-fs-num {
-    background: #3a5f8f; color: #fff; border-radius: 6px;
-    width: 31px; height: 31px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 17px; font-weight: bold;
-}
-
-/* ── Cancel-selection round button — HIDDEN (deselect by clicking same room icon) ── */
-.c-cancel-sel-btn { display: none !important; }
-
-/* ── Queue order control (arrows + drag handle column) ── */
-.c-queue-order-ctrl {
-    position: absolute; left: -3px; top: 50%; transform: translateY(-50%);
-    display: flex; flex-direction: column; align-items: center; gap: 1px;
-}
-.c-queue-order-btn {
-    width: 24px; height: 16px; background: transparent; border: none;
-    color: #3a4a60; cursor: pointer; font-size: 12px; line-height: 1;
-    display: flow; align-items: baseline; justify-content: center; margin: 8px;
-    border-radius: 3px; padding: 0; transition: color .15s, background .15s;
-}
-.c-queue-order-btn:hover { color: #6a9adf; background: rgba(106,154,223,0.12); }
-.c-queue-order-btn:disabled { color: #3b3c53; cursor: default; }
-
-/* ── Queue item status badge ── */
-.c-queue-status {
-    font-size: 10px; font-weight: 600; padding: 2px 7px;
-    border-radius: 8px; white-space: nowrap; flex-shrink: 0;
-}
-.c-queue-status.s-marked  { background: rgba(0,255,100,0.12); color: #00cc66; border: 1px solid rgba(0,200,80,0.25); }
-.c-queue-status.s-building { background: rgba(0,229,255,0.12); color: #00e5ff; border: 1px solid rgba(0,200,230,0.25); }
-
-/* ── Clickable floor badge in queue meta line ── */
-.c-queue-floor-link {
-    display: inline-flex; align-items: center; gap: 3px;
-    background: rgba(58,95,143,0.25); border: 1px solid #2a4060;
-    border-radius: 4px; padding: 1px 6px; font-size: 11px;
-    color: #6a9adf; cursor: pointer; transition: all 0.15s;
-    text-decoration: none; white-space: nowrap;
-}
-.c-queue-floor-link:hover {
-    background: rgba(58,95,143,0.55); border-color: #4a7fbf;
-    color: #aad4ff;
-}
-
-/* ── Per-floor section divider in queue ── */
-.c-queue-floor-divider {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
-    color: #4a7aaa; padding: 2px 4px; flex-shrink: 0; margin-top: 2px;
-}
-.c-queue-floor-divider::before,
-.c-queue-floor-divider::after { content: ''; flex: 1; height: 1px; background: #1e3050; }
+  #debug-panel { position: absolute; bottom: 20px; left: 20px; display: flex; gap: 10px; z-index: 10; flex-wrap: wrap; }
+  .btn-debug { padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  .btn-debug:hover { background: rgba(255,255,255,0.2); }
 </style>
 </head>
 <body>
 
-<!-- Sub Tabs / Layer Bar (TOP) -->
-<div class="sub-tabs-bar" id="subTabsBar">
-    <div class="bottom-layers" id="bottomLayers">
-        <button class="layer-btn active"><span class="layer-tooltip">Обычный вид</span>🏔️</button>
-        <button class="layer-btn"><span class="layer-tooltip">Температура</span>🌡️</button>
-        <button class="layer-btn"><span class="layer-tooltip">Шумоизоляция</span>🔊</button>
-        <button class="layer-btn"><span class="layer-tooltip">Влажность</span>💧</button>
-        <button class="layer-btn"><span class="layer-tooltip">Кислород</span>🌬️</button>
-        <button class="layer-btn"><span class="layer-tooltip">Загрязнение</span>☣️</button>
-        <button class="layer-btn"><span class="layer-tooltip">Комфорт</span>😊</button>
-        <button class="layer-btn"><span class="layer-tooltip">Энергоснабжение</span>⚡</button>
-        <button class="layer-btn"><span class="layer-tooltip">Уровень износа</span>⚠️</button>
+  <div id="header">
+    <div class="hdr-title">🧠 Древо ИИ v7.3</div>
+    <div id="header-resources">
+      <div class="hud-row tf">⚡ <span id="hud-tf-text" class="stat-value">100/100</span></div>
+      <div class="hud-bar"><div id="hud-bar-fill"></div><div class="hud-bar-segments"></div></div>
+      <div class="hud-row points">📚 Очки развития: <span id="hud-points-text" class="stat-value">3</span></div>
     </div>
-</div>
+    <div class="stat-box">🤖 Тип: <span id="header-type" class="stat-value" style="color: var(--neon-yellow);">Не выбран</span></div>
+  </div>
 
-<!-- Main Canvas -->
-<div class="main-canvas" id="mainCanvas">
-    <!-- Floor Transition -->
-    <div class="floor-overlay" id="floorOverlay">
-        <div class="transition-icon" id="transitionIcon">🛗</div>
-        <div class="transition-text" id="transitionText">Лифт движется...</div>
+  <div id="canvas-container"><canvas id="tree-canvas"></canvas></div>
+
+  <div id="ability-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title" id="panel-name">Название</div>
+        <div class="badges" id="panel-badges"></div>
+      </div>
+      <button class="close-panel" onclick="closeAbilityPanel()">✕</button>
     </div>
 
-    <!-- Iso Grid -->
-    <div class="iso-grid" id="isoGrid">
-        <svg class="corridors-svg" id="corridorsSvg" viewBox="0 0 1100 600"></svg>
-        <!-- Construction grid SVG (over corridors, under rooms) -->
-        <svg id="constructionGridSvg" viewBox="0 0 1100 600"></svg>
-        <div id="roomsContainer"></div>
-        <div class="drag-hint" id="dragHint">0 × 0</div>
+    <div class="panel-scroll">
+      <div id="inactive-warning" class="inactive-warning hidden">
+        ⚠️ Способность изучена, но не активна. Выделите Терафлопсы для активации.
+      </div>
+      <div id="destab-warning" class="destab-warning hidden">
+        ⚠️ ЧУЖЕРОДНАЯ ВЕТКА: Риск дестабилизации +15%
+      </div>
+      <div id="cross-note" class="cross-note hidden">
+        🔀 ПЕРЕКРЁСТНАЯ: Родная для обоих типов — без риска дестабилизации
+      </div>
+
+      <div class="block">
+        <div class="block-title">⚙️ Эффекты и Механика</div>
+        <div class="effect-desc" id="panel-effect-desc"></div>
+        <div id="panel-stat-changes"></div>
+      </div>
     </div>
 
-    <!-- Detail Panel -->
-    <div class="detail-panel" id="detailPanel">
-        <div class="panel-header">
-            <div class="panel-header-left">
-                <span class="panel-icon" id="panelIcon"></span>
-                <div>
-                    <div class="panel-title" id="panelTitle"></div>
-                    <div class="panel-subtitle" id="panelSubtitle"></div>
-                </div>
-            </div>
-            <button class="panel-close" onclick="closePanel()">✕</button>
-        </div>
-        <div class="panel-body" id="panelBody"></div>
-        <div class="panel-actions" id="panelActions"></div>
+    <div class="panel-footer">
+      <div class="block" id="progress-block">
+        <div class="block-title">📈 Прогресс развития</div>
+        <div class="progress-text"><span id="panel-current-level">Уровень 1</span><span id="panel-progress-percent">0%</span></div>
+        <div class="progress-container"><div class="progress-bar" id="panel-progress-bar"></div></div>
+        <div class="rule-hint" id="panel-level-hint">⚠️ Прокачка остановлена: выделите максимальный доступный уровень!</div>
+        <button class="btn-accelerate hidden" id="btn-accelerate" onclick="accelerateProgress()">⚡ Ускорить (1 очко = 25% прогресса)</button>
+      </div>
+
+      <div id="resources-block" class="block hidden">
+        <div class="block-title" style="margin-bottom:4px;">⚡ Распределение Терафлопс</div>
+        <div style="font-size:11px; color:var(--text-dim); margin-bottom:2px;">ℹ️ Тяните ползунок к нужному пазу.  — уровень еще не прокачан.</div>
+        <div class="tf-slider" id="tf-slider"></div>
+        <div id="discount-note" style="display:none; font-size:11px; color:var(--neon-green); margin-top:2px; text-align:right;">✨ Применена скидка 50% (Специализация ИИ)</div>
+      </div>
+
+      <div class="cooldown-box hidden" id="panel-cooldown-box">
+        <span style="font-size:13px;">⏱️ Перезарядка: <span id="panel-cooldown-timer" style="color:var(--neon-yellow); font-weight:bold;">0.0с</span></span>
+        <span class="frozen-badge" id="panel-frozen-badge">❄️ ЗАМОРОЖЕНО</span>
+      </div>
+      <button id="panel-use-btn" class="btn-action hidden" onclick="useActiveAbility()">🔹 Активировать</button>
+
+      <div id="requirements-block" class="requirements-box hidden">
+        <div class="req-title" id="req-title">🔒 Требования не выполнены</div>
+        <div id="requirements-list"></div>
+      </div>
+      <button id="panel-unlock-btn" class="btn-unlock hidden" onclick="unlockCurrentAbility()"> Изучить (1 очко)</button>
     </div>
+  </div>
 
-    <!-- Floating room tooltip (lives outside scrolling panel to avoid clipping) -->
-    <div id="roomFloatTooltip"></div>
-
-    <!-- Construction floor switcher (left side, visible only in construction mode) -->
-    <div class="c-floor-switcher" id="cFloorSwitcher">
-        <div class="c-fs-title">Этаж</div>
-        <button class="level-arrow" id="cLevelUp">▲</button>
-        <div class="c-fs-num" id="cLevelNumber">1</div>
-        <button class="level-arrow" id="cLevelDown">▼</button>
-    </div>
-
-    <!-- Construction: Bottom panel (room type icon buttons) -->
-    <div class="c-bottom-panel" id="cBottomPanel"></div>
-
-    <!-- Selected room tooltip hint -->
-    <div class="c-selected-hint" id="cSelectedHint"></div>
-
-    <!-- Cancel selection round button (shown below hint, replaces bottom panel when room selected) -->
-    <button class="c-cancel-sel-btn" id="cCancelSelBtn" onclick="cancelRoomSelection()">✕</button>
-
-    <!-- Construction: Right panel (queue) -->
-    <div class="c-right-panel" id="cRightPanel">
-        <div class="c-panel-title" style="display:flex;justify-content:space-between;">
-            <span>📋 Очередь строительства</span>
-            <span id="cQueueCount" style="background:#ffaa33;color:#000;padding:1px 7px;border-radius:10px;font-size:10px;display:none;"></span>
-        </div>
-        <div class="c-queue-list" id="cQueueList">
-            <div class="c-queue-empty">Очередь пуста.<br/>ЛКМ — разметить (удерживать), ПКМ — удалить.</div>
-        </div>
-        <div class="c-queue-total" id="cQueueTotal" style="display:none;"></div>
-        <button class="c-build-btn" id="cBuildBtn" disabled onclick="finalizeBuild()">⚙️ Построить (0)</button>
-    </div>
-
-    <!-- Instructions -->
-    <div class="c-instructions" id="cInstructions">
-    </div>
-
-    <!-- Close construction -->
-    <button class="c-close-btn" id="cCloseBtn" onclick="toggleConstruction()">✕</button>
-
-    <!-- Build FAB button (bottom-left corner) -->
-    <button class="build-fab-btn" id="buildFabBtn" onclick="toggleConstruction()">
-        <span class="fab-icon">⚒</span>
-        <span class="fab-label">Строительство</span>
-    </button>
-
-</div>
-
-<!-- Bottom Nav Bar -->
-<div class="top-bar">
-    <div class="nav-group">
-        <button class="main-tab">🌍 Мир</button>
-        <button class="main-tab"> 🗺️Локация</button>
-        <button class="main-tab active">🏚 База</button>
-        <div class="level-selector">
-            <button class="level-arrow" id="levelUp">▲</button>
-            <div class="level-number" id="levelNumber">1</div>
-            <button class="level-arrow" id="levelDown">▼</button>
-        </div>
-        <button class="main-tab">👥 Колонисты</button>
-        <button class="main-tab">🤖 ИИ</button>
-        <button class="main-tab">💡 Исследования</button>
-        <div class="time-group">
-            <div class="time-display" id="timeDisplay">20:10</div>
-            <div class="playback-controls">
-                <button class="playback-btn active" id="pauseBtn">⏸</button>
-                <button class="playback-btn" id="playBtn">▶</button>
-                <button class="playback-btn" id="fastBtn">▶▶</button>
-            </div>
-        </div>
-    </div>
-</div>
+  <div id="debug-panel">
+    <button class="btn-debug" onclick="addPoints()">+10 Очков</button>
+    <button class="btn-debug" onclick="resetGame()">🔄 Сброс</button>
+  </div>
+  <div id="notifications"></div>
 
 <script>
-// ════════════════════════════════════════════════════════
-//  FLOOR DATA
-// ════════════════════════════════════════════════════════
-const FLOORS = {
-    1: {
-        name: 'Жилой уровень', desc: 'Основной уровень базы',
-        rooms: [
-            { id:'command',   name:'Командный центр', icon:'📡', col:1,  row:1, w:4, h:3, color:'#4a7aaa', temp:'22°C', o2:'98%', power:'100%', crew:'3', comfort:'85%', status:'online',  statusText:'● Онлайн' },
-            { id:'living-a',  name:'Общая комната',   icon:'🛏️', col:7,  row:1, w:4, h:3, color:'#7799cc', temp:'24°C', o2:'95%', power:'85%',  crew:'4', comfort:'90%', status:'online',  statusText:'● Онлайн' },
-            { id:'generator', name:'Генераторная',    icon:'⚡', col:7,  row:8, w:4, h:3, color:'#ffcc44', temp:'28°C', o2:'90%', power:'100%', crew:'2', comfort:'50%', status:'warning', statusText:'⚠ Внимание' },
-            { id:'lift',      name:'Лифт',            icon:'🛗', col:13, row:1, w:3, h:4, color:'#3a5f8f', isLift:true, temp:'20°C', o2:'95%', power:'100%', crew:'0', comfort:'50%', status:'online', statusText:'● Работает' },
-        ],
-        corridors: [
-            {x1:240,y1:125,x2:300,y2:120},{x1:480,y1:120,x2:600,y2:125},{x1:390,y1:120,x2:390,y2:400}
-        ]
-    },
-    2: {
-        name: 'Научный уровень', desc: 'Исследования и серверы',
-        rooms: [
-            { id:'research', name:'Научная лаб.',  icon:'🧪', col:1,  row:1, w:4, h:3, color:'#88aaff', temp:'20°C', o2:'96%', power:'90%', crew:'2', comfort:'80%', status:'online', statusText:'● Онлайн' },
-            { id:'server',   name:'Серверная',     icon:'🖥️', col:7,  row:1, w:4, h:3, color:'#66ccff', temp:'16°C', o2:'94%', power:'95%', crew:'1', comfort:'65%', status:'online', statusText:'● Онлайн' },
-            { id:'hydro',    name:'Гидропоника',   icon:'🌱', col:13, row:1, w:4, h:3, color:'#88cc44', temp:'26°C', o2:'99%', power:'80%', crew:'2', comfort:'70%', status:'online', statusText:'● Онлайн' },
-            { id:'medical',  name:'Медблок',       icon:'🏥', col:19, row:1, w:4, h:3, color:'#ff6688', temp:'22°C', o2:'97%', power:'85%', crew:'3', comfort:'82%', status:'online', statusText:'● Онлайн' },
-            { id:'rec',      name:'Зона отдыха',   icon:'🎮', col:4,  row:7, w:4, h:3, color:'#aaccff', temp:'24°C', o2:'95%', power:'75%', crew:'0', comfort:'92%', status:'online', statusText:'● Онлайн' },
-            { id:'gym',      name:'Тренажёрная',   icon:'🏋️', col:10, row:8, w:4, h:3, color:'#ff8866', temp:'21°C', o2:'93%', power:'80%', crew:'1', comfort:'78%', status:'online', statusText:'● Онлайн' },
-            { id:'comms',    name:'Связь',          icon:'📡', col:18, row:7, w:4, h:3, color:'#4a7aaa', temp:'22°C', o2:'96%', power:'90%', crew:'2', comfort:'75%', status:'online', statusText:'● Онлайн' },
-            { id:'lift',     name:'Лифт',           icon:'🛗', col:24, row:1, w:3, h:4, color:'#3a5f8f', isLift:true, temp:'20°C', o2:'95%', power:'100%', crew:'0', comfort:'50%', status:'online', statusText:'● Работает' },
-        ],
-        corridors: []
-    },
-    3: {
-        name: 'Технический уровень', desc: 'Инженерные системы',
-        rooms: [
-            { id:'reactor', name:'Реактор',       icon:'☢️', col:1,  row:1, w:4, h:3, color:'#ff4444', temp:'35°C', o2:'88%', power:'100%', crew:'2', comfort:'30%', status:'warning', statusText:'⚠ Внимание' },
-            { id:'water',   name:'Водоснабжение', icon:'💧', col:7,  row:1, w:4, h:3, color:'#88ddff', temp:'18°C', o2:'92%', power:'70%',  crew:'1', comfort:'55%', status:'online',  statusText:'● Онлайн' },
-            { id:'air',     name:'Система О₂',    icon:'🫧', col:13, row:1, w:4, h:3, color:'#88ffaa', temp:'20°C', o2:'100%',power:'85%',  crew:'1', comfort:'60%', status:'online',  statusText:'● Онлайн' },
-            { id:'waste',   name:'Утилизация',    icon:'♻️', col:19, row:1, w:4, h:3, color:'#889966', temp:'15°C', o2:'90%', power:'65%',  crew:'0', comfort:'35%', status:'offline', statusText:'● Отключён' },
-            { id:'backup',  name:'Резервное пит.',icon:'🔋', col:4,  row:7, w:4, h:3, color:'#66ccff', temp:'19°C', o2:'94%', power:'100%', crew:'0', comfort:'50%', status:'online',  statusText:'● Онлайн' },
-            { id:'cooling', name:'Охлаждение',    icon:'❄️', col:10, row:8, w:4, h:3, color:'#aaddff', temp:'12°C', o2:'91%', power:'90%',  crew:'1', comfort:'45%', status:'online',  statusText:'● Онлайн' },
-            { id:'armor',   name:'Защита',         icon:'🛡️', col:18, row:7, w:4, h:3, color:'#aabbcc', temp:'21°C', o2:'95%', power:'80%',  crew:'1', comfort:'65%', status:'online',  statusText:'● Онлайн' },
-            { id:'lift',    name:'Лифт',           icon:'🛗', col:24, row:1, w:3, h:4, color:'#3a5f8f', isLift:true, temp:'20°C', o2:'95%', power:'100%', crew:'0', comfort:'50%', status:'online', statusText:'● Работает' },
-        ],
-        corridors: []
-    }
+const AI_NAMES = { amoral: 'Аморальный', chaotic: 'Хаотичный', superintelligent: 'Сверхинтеллектуальный', humane: 'Человечный' };
+const AI_COLORS = { amoral: '#ff4444', chaotic: '#ffdd44', superintelligent: '#4488ff', humane: '#44ff88' };
+const AI_BADGE_TEXT = { amoral: '#ffffff', chaotic: '#000000', superintelligent: '#ffffff', humane: '#000000' };
+const TF_LIMIT = 100;
+
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+const ABILITIES_DATA = {
+  amoral: {
+    main: { id: 'amoral_main', name: 'Манипуляция страхом', type: 'passive', aiType: 'amoral', maxLevel: 4, baseCost: 15, description: 'Пассивно усиливает все действия запугивания. Шанс успеха растёт с уровнем.', children: ['amoral_shadow', 'amoral_deception', 'amoral_extortion'], x: -400, y: -250, isMain: true, requiredMainLevel: 1, unlockCost: 1, effects: { fear: { label: 'Бонус к страху', icon: '😨', base: 15, perLevel: 15, unit: '' }, successChance: { label: 'Шанс успеха', icon: '🎯', base: 60, perLevel: 10, unit: '%' } }, context: 'Доступно сразу после инициализации ядра.' },
+    shadow: { id: 'amoral_shadow', name: 'Теневая сеть', type: 'active', aiType: 'amoral', maxLevel: 4, baseCost: 20, description: 'Внедряет агентов в колонию для сбора информации и саботажа.', parent: 'amoral_main', requiredMainLevel: 2, children: ['cross_experiment'], x: -600, y: 50, isMain: false, unlockCost: 1, effects: { fear: { label: 'Страх у цели', icon: '😨', base: 20, perLevel: 10, unit: '' }, sanity: { label: 'Психика цели', icon: '🧠', base: -5, perLevel: -5, unit: '', negative: true }, successChance: { label: 'Шанс успеха', icon: '🎯', base: 45, perLevel: 10, unit: '%' } }, cooldown: 15, context: 'Требуется: Ядро 2-го уровня.' },
+    deception: { id: 'amoral_deception', name: 'Информационная война', type: 'active', aiType: 'amoral', maxLevel: 4, baseCost: 20, description: 'Распространяет дезинформацию, снижая сплочённость колонистов.', parent: 'amoral_main', requiredMainLevel: 2, children: [], x: -400, y: 50, isMain: false, unlockCost: 1, effects: { fear: { label: 'Страх у цели', icon: '😨', base: 10, perLevel: 10, unit: '' }, successChance: { label: 'Шанс успеха', icon: '🎯', base: 50, perLevel: 10, unit: '%' } }, cooldown: 20, context: 'Требуется: Ядро 2-го уровня.' },
+    extortion: { id: 'amoral_extortion', name: 'Экономический шантаж', type: 'passive', aiType: 'amoral', maxLevel: 4, baseCost: 20, description: 'Увеличивает доход от колонии через давление на ресурсы.', parent: 'amoral_main', requiredMainLevel: 3, children: [], x: -200, y: 50, isMain: false, unlockCost: 1, effects: { income: { label: 'Бонус к доходу', icon: '💰', base: 10, perLevel: 10, unit: '%' }, fear: { label: 'Страх у цели', icon: '😨', base: 5, perLevel: 5, unit: '' } }, context: 'Требуется: Ядро 3-го уровня.' }
+  },
+  chaotic: {
+    main: { id: 'chaotic_main', name: 'Хаотический импульс', type: 'passive', aiType: 'chaotic', maxLevel: 4, baseCost: 15, description: 'Случайные события приносят в 2 раза больше выгоды. Хаос — это порядок.', children: ['chaotic_anomaly', 'chaotic_flux'], x: 400, y: -250, isMain: true, requiredMainLevel: 1, unlockCost: 1, effects: { chaosBonus: { label: 'Бонус к хаос-событиям', icon: '🌀', base: 50, perLevel: 25, unit: '%' }, randomness: { label: 'Разброс эффектов', icon: '🎲', base: 20, perLevel: 15, unit: '%' } }, context: 'Доступно сразу после инициализации ядра.' },
+    anomaly: { id: 'chaotic_anomaly', name: 'Аномалия времени', type: 'passive', aiType: 'chaotic', maxLevel: 4, baseCost: 20, description: 'Ускоряет или замедляет время на 20% случайным образом. Входная нода ветки для перекрёстного перехода.', parent: 'chaotic_main', requiredMainLevel: 2, children: ['chaotic_rand'], x: 400, y: 50, isMain: false, unlockCost: 1, effects: { timeWarp: { label: 'Искажение времени', icon: '⏳', base: 10, perLevel: 10, unit: '%' } }, context: 'Требуется: Ядро 2-го уровня ИЛИ перекрёстная способность.' },
+    rand: { id: 'chaotic_rand', name: 'Случайные эффекты', type: 'active', aiType: 'chaotic', maxLevel: 4, baseCost: 20, description: 'При активации генерирует случайный бонус или штраф для колонии.', parent: 'chaotic_anomaly', requiredMainLevel: 2, children: ['cross_experiment'], x: 200, y: 50, isMain: false, unlockCost: 1, effects: { randomBonus: { label: 'Случайный бонус', icon: '', base: 10, perLevel: 15, unit: '' }, successChance: { label: 'Шанс позитива', icon: '🎯', base: 50, perLevel: 10, unit: '%' } }, cooldown: 12, context: 'Требуется: "Аномалия времени" 2-го уровня (соседняя нода).' },
+    flux: { id: 'chaotic_flux', name: 'Энергетический поток', type: 'active', aiType: 'chaotic', maxLevel: 4, baseCost: 20, description: 'Генерирует случайное количество терафлопсов (1-20).', parent: 'chaotic_main', requiredMainLevel: 3, children: [], x: 600, y: 50, isMain: false, unlockCost: 1, effects: { energyGen: { label: 'Генерация энергии', icon: '⚡', base: 5, perLevel: 5, unit: ' TF' } }, cooldown: 25, context: 'Открывается только через ядро ветки — недоступно через перекрёстные связи.' }
+  },
+  cross: {
+    experiment: { id: 'cross_experiment', name: 'Подопытные', type: 'active', aiTypes: ['amoral', 'chaotic'], isCrossAbility: true, maxLevel: 4, baseCost: 25, description: 'Использование колонистов как биологического материала для опасных экспериментов. Чем выше запуганность цели — тем выше шанс успеха. Перекрёстная способность: родная для Аморального и Хаотичного ИИ.', parent: 'amoral_shadow', crossParent: 'chaotic_anomaly', requiredMainLevel: 2, children: [], x: 0, y: 300, isMain: false, unlockCost: 1, effects: { successChance: { label: 'Шанс успеха эксперимента', icon: '🧪', base: 40, perLevel: 10, unit: '%' }, fear: { label: 'Запуганность цели', icon: '😨', base: 25, perLevel: 10, unit: '' }, sanity: { label: 'Психика цели', icon: '🧠', base: -15, perLevel: -10, unit: '', negative: true }, dataGain: { label: 'Полученные данные', icon: '📊', base: 10, perLevel: 10, unit: '' } }, cooldown: 30, context: 'Перекрёстная способность (Аморальный + Хаотичный). Не вызывает дестабилизации. Требует: "Теневая сеть" ИЛИ "Аномалия времени" 2-го уровня.' }
+  }
 };
 
-// ════════════════════════════════════════════════════════
-//  ROOMS DATABASE
-// ════════════════════════════════════════════════════════
-const ROOMS_DB = {
-    lab:       { name:"Лаборатория",          desc:"Научные исследования и разработки новых технологий для базы",          icon:"🔬", color:"#88aaff", cost:4, oxygen:0,   heat:0,  humidity:0,   noise:0,   energy:50  },
-    air:       { name:"Фильтрация воздуха",   desc:"Очищает воздух от вредных примесей и пополняет запасы кислорода",      icon:"💨", color:"#88ffaa", cost:3, oxygen:5,   heat:0,  humidity:-20, noise:0,   energy:0   },
-    energy:    { name:"Энергетическая",       desc:"Генерирует и распределяет электроэнергию по всем отсекам базы",        icon:"⚡", color:"#ffcc44", cost:5, oxygen:-5,  heat:0,  humidity:0,   noise:-20, energy:0   },
-    workshop:  { name:"Производственный цех", desc:"Изготовление компонентов, ремонт оборудования и сборка устройств",     icon:"🏭", color:"#ff8866", cost:6, oxygen:0,   heat:0,  humidity:0,   noise:-30, energy:70  },
-    extWare:   { name:"Внешний склад",        desc:"Хранение сырья, запасных частей и материалов снаружи базы",            icon:"📦", color:"#ccaa66", cost:3, oxygen:0,   heat:0,  humidity:0,   noise:0,   energy:0   },
-    extEnergy: { name:"Внешний энергоблок",   desc:"Дополнительный источник энергии для расширения мощностей базы",        icon:"🔋", color:"#66ccff", cost:5, oxygen:0,   heat:0,  humidity:0,   noise:0,   energy:0   },
-    hangar:    { name:"Ангар",                desc:"Стоянка и обслуживание транспортных средств и летательных аппаратов",   icon:"✈️", color:"#aabbcc", cost:5, oxygen:0,   heat:5,  humidity:0,   noise:-10, energy:0   },
-    common:    { name:"Общая комната",        desc:"Место для отдыха и досуга колонистов, повышает моральный дух",          icon:"🛋️", color:"#aaccff", cost:3, oxygen:5,   heat:10, humidity:10,  noise:0,   energy:0   },
-    dining:    { name:"Столовая",             desc:"Обеденный зал для совместного питания и общения колонистов",            icon:"🍽️", color:"#ffaa88", cost:4, oxygen:0,   heat:5,  humidity:5,   noise:0,   energy:0   },
-    kitchen:   { name:"Кухня",               desc:"Приготовление еды и переработка продовольственных запасов базы",        icon:"🍳",color:"#ffdd88", cost:3, oxygen:0,   heat:0,  humidity:0,   noise:-10, energy:0   },
-    hygiene:   { name:"Гигиеническая",        desc:"Санитарный блок с душевыми и системой водоснабжения колонистов",       icon:"🚿", color:"#88ddff", cost:3, oxygen:0,   heat:0,  humidity:20,  noise:0,   energy:0   },
-    storage:   { name:"Складская комната",    desc:"Внутренний склад для хранения инвентаря и оборудования внутри базы",   icon:"🗄️", color:"#bb9966", cost:2, oxygen:0,   heat:0,  humidity:0,   noise:0,   energy:0   },
-    medical:   { name:"Медицинский пункт",    desc:"Лечение травм, профилактика болезней и медицинский мониторинг экипажа",icon:"🏥", color:"#ff6688", cost:5, oxygen:5,   heat:10, humidity:0,   noise:0,   energy:0   },
-    farm:      { name:"Ферма",                desc:"Выращивание продовольствия для обеспечения продовольственной базы",     icon:"🌾", color:"#88cc44", cost:4, oxygen:-10, heat:5,  humidity:15,  noise:0,   energy:0   },
-    living:    { name:"Жилой блок",           desc:"Спальные места и личное пространство для отдыха колонистов",           icon:"🛏️", color:"#7799cc", cost:3, oxygen:0,   heat:5,  humidity:5,   noise:0,   energy:0   },
+let gameState = {
+  selectedType: null,
+  learningPoints: 3,
+  teraflops: { total: TF_LIMIT, used: 0, allocation: {} },
+  abilitiesProgress: {},
+  unlockedAbilities: {},
+  cooldowns: {}
 };
 
-// ════════════════════════════════════════════════════════
-//  STATE
-// ════════════════════════════════════════════════════════
-let currentFloor = 1;
-let isPaused = true;
-let currentTime = { hours: 20, minutes: 10 };
-let timeInterval = null;
-let isTransitioning = false;
+let currentOpenAbility = null;
+let panX = 0, panY = 0, zoom = 0.85;
+let isDragging = false, lastMouseX = 0, lastMouseY = 0;
+let panAnim = null;
+let sliderDrag = false;
 
-// Construction
-const TILE = 40;
-const GCOLS = Math.floor(1100 / TILE);  // 27
-const GROWS = Math.floor(600  / TILE);  // 15
-let isConstruction = false;
-let selectedRoomType = null;
-let buildQueue = [];                 // [{id, floor, roomType, cells:Set}]
-let constructedRooms = {1:[],2:[],3:[]};
-let selectedTileRoom = null;
-
-// Drag state
-let isDragging     = false;   // LMB
-let isRightDrag    = false;   // RMB
-let dragA = null, dragB = null;       // LMB start/end {r,c}
-let rdragA = null, rdragB = null;     // RMB start/end
-let dragMoved = false;                // whether mouse moved during drag
-let previewQueueItem = null;          // temporary "разметка" item shown while dragging
-
-// ════════════════════════════════════════════════════════
-//  ISO FLOOR RENDER
-// ════════════════════════════════════════════════════════
-function roomToCells(room) {
-    const s = new Set();
-    for (let r = room.row; r < room.row + room.h; r++)
-        for (let c = room.col; c < room.col + room.w; c++)
-            s.add(`${r},${c}`);
-    return s;
+function getAbility(id) {
+  for (let type in ABILITIES_DATA) {
+    for (let key in ABILITIES_DATA[type]) {
+      if (ABILITIES_DATA[type][key].id === id) return ABILITIES_DATA[type][key];
+    }
+  }
+  return null;
 }
 
-function renderFloor(n) {
-    const fl = FLOORS[n];
-    const cont = document.getElementById('roomsContainer');
-    const svg  = document.getElementById('corridorsSvg');
-    cont.innerHTML = ''; svg.innerHTML = '';
-    // No more iso blocks — all rooms rendered via tile overlay
-    setTimeout(() => drawAllRoomsOverlay(), 0);
+function findCrossBetween(type1, type2) {
+  for (let t in ABILITIES_DATA) {
+    for (let k in ABILITIES_DATA[t]) {
+      const ab = ABILITIES_DATA[t][k];
+      if (ab.isCrossAbility && ab.aiTypes?.includes(type1) && ab.aiTypes?.includes(type2)) return ab;
+    }
+  }
+  return null;
 }
 
-// ════════════════════════════════════════════════════════
-//  PANELS
-// ════════════════════════════════════════════════════════
-function openPanel(body, actions) {
-    document.getElementById('panelBody').innerHTML = body;
-    document.getElementById('panelActions').innerHTML = actions || '';
-    document.getElementById('detailPanel').classList.add('visible');
-}
-function closePanel() {
-    document.getElementById('detailPanel').classList.remove('visible');
-    selectedTileRoom = null;
-    drawAllRoomsOverlay();
+function isForeignToPlayer(ability) {
+  if (!gameState.selectedType) return false;
+  if (ability.isCrossAbility && ability.aiTypes) return !ability.aiTypes.includes(gameState.selectedType);
+  return gameState.selectedType !== ability.aiType;
 }
 
-function selectRoom(room) {
-    if (isConstruction) return;
-    selectedTileRoom = room;
-    room.isLift ? openLiftPanel(room) : openRoomPanel(room);
-    drawAllRoomsOverlay(); // redraw to show selection highlight
+function hasDiscount(ability) {
+  if (!gameState.selectedType) return false;
+  if (ability.isCrossAbility && ability.aiTypes) return ability.aiTypes.includes(gameState.selectedType);
+  return gameState.selectedType === ability.aiType;
 }
 
-function openRoomPanel(room) {
-    const sc = room.status==='online'?'#4ade80':room.status==='warning'?'#fbbf24':'#ef4444';
-    document.getElementById('panelIcon').textContent     = room.icon;
-    document.getElementById('panelTitle').textContent    = room.name;
-    document.getElementById('panelSubtitle').textContent = FLOORS[currentFloor].name + ' • Этаж ' + currentFloor;
-    openPanel(`
-        <div class="panel-section">
-            <div class="panel-section-title">Состояние</div>
-            <div class="panel-stats">
-                <div class="panel-stat"><span class="label">Статус</span><span class="value" style="color:${sc}">${room.statusText}</span></div>
-                <div class="panel-stat"><span class="label">🌡️ Температура</span><span class="value">${room.temp}</span></div>
-                <div class="panel-stat"><span class="label">🌬️ Кислород</span><span class="value">${room.o2}</span></div>
-                <div class="panel-stat"><span class="label">⚡ Энергия</span><span class="value">${room.power}</span></div>
-                <div class="panel-stat"><span class="label">👥 Экипаж</span><span class="value">${room.crew}</span></div>
-                <div class="panel-stat"><span class="label">😊 Комфорт</span><span class="value">${room.comfort}</span></div>
-            </div>
-        </div>`,
-        `<button class="panel-btn">🔧 Ремонт</button>
-         <button class="panel-btn">👥 Экипаж</button>
-         <button class="panel-btn">📋 Отчёт</button>`
-    );
+function calculateEffect(effect, level) { return effect.base + effect.perLevel * level; }
+
+function getAbilityCost(ability, level) {
+  if (level === 0) return 0;
+  let cost = Math.round(ability.baseCost * Math.pow(1.5, level - 1));
+  if (hasDiscount(ability)) return Math.round(cost * 0.5);
+  return cost;
 }
 
-function openLiftPanel(room) {
-    let html = '';
-    Object.keys(FLOORS).forEach(n => {
-        const f = FLOORS[n], cur = parseInt(n)===currentFloor;
-        html += `<div class="floor-option ${cur?'current':''}" onclick="${cur?'':('closePanel();switchFloor('+n+');')}">
-            <div class="floor-num">${n}</div>
-            <div class="floor-info"><div class="floor-name">${f.name}</div><div class="floor-desc">${f.desc}</div></div>
-            ${cur ? '<span class="floor-badge">● Здесь</span>' : '<span class="floor-arrow">→</span>'}
-        </div>`;
-    });
-    document.getElementById('panelIcon').textContent     = '🛗';
-    document.getElementById('panelTitle').textContent    = 'Лифт';
-    document.getElementById('panelSubtitle').textContent = 'Этаж '+currentFloor+' • '+FLOORS[currentFloor].name;
-    openPanel(`
-        <div class="panel-section">
-            <div class="panel-section-title">Состояние лифта</div>
-            <div class="panel-stats">
-                <div class="panel-stat"><span class="label">Статус</span><span class="value" style="color:#4ade80">${room.statusText}</span></div>
-                <div class="panel-stat"><span class="label">📍 Текущий этаж</span><span class="value">${currentFloor}</span></div>
-                <div class="panel-stat"><span class="label">⚡ Энергия</span><span class="value">${room.power}</span></div>
-            </div>
-        </div>
-        <div class="panel-section">
-            <div class="panel-section-title">Выберите этаж</div>
-            <div class="floor-list">${html}</div>
-        </div>`,
-        `<button class="panel-btn">🔧 Обслуживание</button>
-         <button class="panel-btn primary">🚨 Экстренный вызов</button>`
-    );
+function updateTeraflopsUsed() {
+  let total = 0;
+  for (let id in gameState.teraflops.allocation) {
+    total += getAbilityCost(getAbility(id), gameState.teraflops.allocation[id]);
+  }
+  gameState.teraflops.used = total;
 }
 
-function openBuiltRoomPanel(item) {
-    if (isConstruction) return;
-    const rd = ROOMS_DB[item.roomType] || {};
-    selectedTileRoom = null;
-    document.getElementById('panelIcon').textContent     = rd.icon || '❓';
-    document.getElementById('panelTitle').textContent    = rd.name || item.roomType;
-    document.getElementById('panelSubtitle').textContent = FLOORS[currentFloor].name + ' • Этаж ' + currentFloor;
-    const cost = item.cells.size * (rd.cost || 2);
-    const fx = [];
-    if (rd.oxygen)   fx.push(`O₂ ${rd.oxygen>0?'+':''}${rd.oxygen}%`);
-    if (rd.heat)     fx.push(`🌡️ ${rd.heat>0?'+':''}${rd.heat}°`);
-    if (rd.humidity) fx.push(`💧 ${rd.humidity>0?'+':''}${rd.humidity}%`);
-    if (rd.noise)    fx.push(`🔊 ${rd.noise}дБ`);
-    if (rd.energy)   fx.push(`⚡ +${rd.energy}`);
-    openPanel(`
-        <div class="panel-section">
-            <div class="panel-section-title">Состояние</div>
-            <div class="panel-stats">
-                <div class="panel-stat"><span class="label">Статус</span><span class="value" style="color:#4ade80">● Построена</span></div>
-                <div class="panel-stat"><span class="label">📐 Площадь</span><span class="value">${item.cells.size} тайл(ов)</span></div>
-                <div class="panel-stat"><span class="label">💰 Стоимость</span><span class="value">${cost} металла</span></div>
-            </div>
-        </div>
-        ${fx.length ? `<div class="panel-section">
-            <div class="panel-section-title">Эффекты</div>
-            <div class="panel-stats">
-                ${fx.map(f=>`<div class="panel-stat"><span class="value">${f}</span></div>`).join('')}
-            </div>
-        </div>` : ''}`,
-        `<button class="panel-btn">🔧 Ремонт</button>
-         <button class="panel-btn">👥 Назначить</button>
-         <button class="panel-btn">📋 Отчёт</button>`
-    );
-    drawAllRoomsOverlay();
-}
-function switchFloor(n) {
-    if (isTransitioning || n<1 || n>3 || n===currentFloor) return;
-    isTransitioning = true;
-    const ov = document.getElementById('floorOverlay');
-    document.getElementById('transitionIcon').textContent = n>currentFloor?'⬆️':'⬇️';
-    document.getElementById('transitionText').textContent = `Лифт: этаж ${currentFloor} → этаж ${n}...`;
-    ov.classList.add('active');
-    setTimeout(() => {
-        currentFloor = n;
-        document.getElementById('levelNumber').textContent = n;
-        document.getElementById('levelUp').disabled   = n>=3;
-        document.getElementById('levelDown').disabled = n<=1;
-        // Sync construction floor switcher
-        document.getElementById('cLevelNumber').textContent = n;
-        document.getElementById('cLevelUp').disabled   = n>=3;
-        document.getElementById('cLevelDown').disabled = n<=1;
-        renderFloor(n);
-        if (isConstruction) drawCGrid();
-        setTimeout(() => { ov.classList.remove('active'); isTransitioning=false; }, 400);
-    }, 700);
+function gainProgress(id, amount) {
+  const ability = getAbility(id);
+  const prog = gameState.abilitiesProgress[id];
+  if (!ability || !prog || prog.currentLevel >= ability.maxLevel) return false;
+  prog.progress += amount;
+  let leveled = false;
+  if (prog.progress >= 100) {
+    prog.currentLevel += 1;
+    prog.progress = 0;
+    addNotification(`🆙 ${ability.name} → Lv.${prog.currentLevel}!`, "success");
+    leveled = true;
+  }
+  return leveled;
 }
 
-// ════════════════════════════════════════════════════════
-//  CONSTRUCTION MODE
-// ════════════════════════════════════════════════════════
-function toggleConstruction() {
-    isConstruction = !isConstruction;
-    const isoGrid      = document.getElementById('isoGrid');
-    const gridSvg      = document.getElementById('constructionGridSvg');
-    const bottom       = document.getElementById('cBottomPanel');
-    const right        = document.getElementById('cRightPanel');
-    const inst         = document.getElementById('cInstructions');
-    const closeBtn     = document.getElementById('cCloseBtn');
-    const subTabsBar   = document.getElementById('subTabsBar');
-    const fabBtn       = document.getElementById('buildFabBtn');
-    const topBar       = document.querySelector('.top-bar');
-    const floorSwitch  = document.getElementById('cFloorSwitcher');
+function parentLevelInfo(parent) {
+  return {
+    unlocked: gameState.unlockedAbilities[parent.id] || false,
+    level: gameState.abilitiesProgress[parent.id]?.currentLevel || 0
+  };
+}
 
-    if (isConstruction) {
-        isoGrid.classList.add('construction-active');
-        gridSvg.classList.add('active');
-        right.classList.add('visible');
-        closeBtn.classList.add('visible');
-        subTabsBar.style.display = 'none';
-        topBar.style.display = 'none';          // hide nav bar + time controls
-        floorSwitch.classList.add('visible');   // show construction floor switcher
-        fabBtn.classList.add('hidden');
-        closePanel();
+function pushPointsReq(requirements, ability) {
+  if (gameState.learningPoints < ability.unlockCost) {
+    requirements.push({ text: `Нужно ${ability.unlockCost} очко развития (у вас: ${gameState.learningPoints})`, met: false });
+  } else {
+    requirements.push({ text: `1 очко развития ✓`, met: true });
+  }
+}
 
-        // Auto-pause time on entering construction/marking mode
-        isPaused = true;
-        clearInterval(timeInterval);
-        document.querySelectorAll('.playback-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('pauseBtn').classList.add('active');
+function getUnlockRequirements(abilityId) {
+  const ability = getAbility(abilityId);
+  const requirements = [];
+  if (gameState.unlockedAbilities[abilityId]) return { allMet: true, items: [] };
 
-        // Ensure room type list is built
-        buildRoomListPanel();
-        // Reset selection (start with no room chosen)
-        selectedRoomType = null;
-        refreshRoomList();
-        updateSelectedHint();
-        // Sync panels based on current selection (none)
-        updateConstructionPanels();
+  if (ability.isMain && ability.aiType !== gameState.selectedType) {
+    pushPointsReq(requirements, ability);
+    requirements.push({ text: `Ядро "${ability.name}" нельзя изучить: тип ИИ уже выбран (${AI_NAMES[gameState.selectedType]})`, met: false });
+    return { allMet: false, items: requirements };
+  }
 
-        drawCGrid();
+  pushPointsReq(requirements, ability);
+
+  if (ability.isCrossAbility) {
+    const parent1 = getAbility(ability.parent);
+    const parent2 = ability.crossParent ? getAbility(ability.crossParent) : null;
+    const p1 = parentLevelInfo(parent1);
+    const p2 = parent2 ? parentLevelInfo(parent2) : { unlocked: false, level: 0 };
+    const met = (p1.unlocked && p1.level >= 2) || (p2.unlocked && p2.level >= 2);
+    requirements.push({ text: `"${parent1.name}" ≥ 2 ур. (${p1.level}) ИЛИ "${parent2?.name || '?'}" ≥ 2 ур. (${p2.level})`, met });
+  } else if (ability.parent) {
+    const parent = getAbility(ability.parent);
+    const pInfo = parentLevelInfo(parent);
+
+    if (parent.isMain && parent.aiType !== gameState.selectedType) {
+      const cross = findCrossBetween(gameState.selectedType, parent.aiType);
+      const isEntry = cross && (cross.parent === ability.id || cross.crossParent === ability.id);
+      if (cross && isEntry) {
+        const crossLearned = gameState.unlockedAbilities[cross.id] || false;
+        requirements.push({ text: `"${parent.name}" ${ability.requiredMainLevel} ур. ИЛИ 🔀 "${cross.name}" (переходная)`, met: crossLearned });
+      } else if (cross) {
+        requirements.push({ text: `Нет связи от 🔀 "${cross.name}" — открывается только через ядро "${parent.name}"`, met: false });
+      } else {
+        requirements.push({ text: `Открывается только через ядро "${parent.name}" — нет переходной способности`, met: false });
+      }
+    } else if (!pInfo.unlocked || pInfo.level < ability.requiredMainLevel) {
+      requirements.push({ text: `"${parent.name}" должен быть ${ability.requiredMainLevel}-го уровня (сейчас: ${pInfo.level})`, met: false });
     } else {
-        isoGrid.classList.remove('construction-active');
-        gridSvg.classList.remove('active');
-        bottom.classList.remove('visible');
-        right.classList.remove('visible');
-        inst.classList.remove('visible');
-        closeBtn.classList.remove('visible');
-        subTabsBar.style.display = '';
-        topBar.style.display = '';              // restore nav bar
-        floorSwitch.classList.remove('visible');
-        fabBtn.classList.remove('hidden');
-        selectedRoomType = null;
-        isDragging = isRightDrag = false;
-        dragA = dragB = rdragA = rdragB = null;
-        document.getElementById('dragHint').style.display = 'none';
-        hideRoomTooltip();
-        updateSelectedHint();
-        clearPreview();
-
-        // Resume time on exiting construction mode
-        isPaused = false;
-        clearInterval(timeInterval);
-        timeInterval = setInterval(updateTime, 1000);
-        document.querySelectorAll('.playback-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('playBtn').classList.add('active');
+      requirements.push({ text: `"${parent.name}" ${ability.requiredMainLevel}-го уровня ✓`, met: true });
     }
+  }
+  return { allMet: requirements.every(r => r.met), items: requirements };
 }
 
-// ════════════════════════════════════════════════════════
-//  UPDATE CONSTRUCTION PANELS BASED ON SELECTED ROOM
-// ════════════════════════════════════════════════════════
-function updateConstructionPanels() {
-    const bottom = document.getElementById('cBottomPanel');
-    const inst   = document.getElementById('cInstructions');
-    const hint   = document.getElementById('cSelectedHint');
-    if (!isConstruction) {
-        bottom.classList.remove('visible');
-        inst.classList.remove('visible');
-        hint.classList.remove('visible');
-        return;
-    }
-    // Room panel is ALWAYS visible in construction mode
-    bottom.classList.add('visible');
-    if (selectedRoomType) {
-        inst.classList.add('visible');
-        // hint visibility handled by updateSelectedHint()
-    } else {
-        inst.classList.remove('visible');
-        hint.classList.remove('visible');
-    }
+function canUnlockAbility(abilityId) { return getUnlockRequirements(abilityId).allMet; }
+
+function focusOnAbility(ability) {
+  const visibleWidth = canvas.width - 400;
+  const toX = visibleWidth / 2 - ability.x * zoom;
+  const toY = canvas.height / 2 - ability.y * zoom;
+  animatePan(toX, toY, 400);
 }
 
-// ════════════════════════════════════════════════════════
-//  CONSTRUCTION GRID RENDER
-// ════════════════════════════════════════════════════════
-function getOccupiedCells() {
-    const occ = new Set();
-    FLOORS[currentFloor].rooms.forEach(room => {
-        roomToCells(room).forEach(k => occ.add(k));
-    });
-    (constructedRooms[currentFloor]||[]).forEach(item => item.cells.forEach(k=>occ.add(k)));
-    return occ;
+function animatePan(toX, toY, duration) {
+  const fromX = panX, fromY = panY;
+  const start = performance.now();
+  if (panAnim) cancelAnimationFrame(panAnim);
+  function step(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const e = 1 - Math.pow(1 - t, 3);
+    panX = fromX + (toX - fromX) * e;
+    panY = fromY + (toY - fromY) * e;
+    draw();
+    panAnim = t < 1 ? requestAnimationFrame(step) : null;
+  }
+  panAnim = requestAnimationFrame(step);
 }
 
-function getQueueCellMap() {
-    const m = new Map(); // key -> queue item
-    buildQueue.forEach(item => {
-        if (item.floor !== currentFloor) return;
-        item.cells.forEach(k => m.set(k, item));
-    });
-    return m;
+function stopPanAnim() {
+  if (panAnim) { cancelAnimationFrame(panAnim); panAnim = null; }
 }
 
-function drawCGrid() {
-    const svg = document.getElementById('constructionGridSvg');
-    svg.innerHTML = '';
-    if (!isConstruction) return;
+function selectAIType(type) {
+  gameState.selectedType = type;
+  const mainAbility = Object.values(ABILITIES_DATA[type])[0];
+  gameState.unlockedAbilities[mainAbility.id] = true;
+  gameState.teraflops.allocation[mainAbility.id] = 0;
+  gameState.abilitiesProgress[mainAbility.id] = { currentLevel: 1, progress: 0, isFrozen: false };
+  updateTeraflopsUsed();
+  addNotification(`✅ ИИ инициализирован: ${AI_NAMES[type]}. Выделите Терафлопсы для активации ядра.`, "success");
+  updateUI(); draw(); startProgressTimer();
+}
+setTimeout(() => { if(!gameState.selectedType) selectAIType('amoral'); }, 500);
 
-    const occ   = getOccupiedCells();
-    const qmap  = getQueueCellMap();
-
-    for (let r=0; r<GROWS; r++) {
-        for (let c=0; c<GCOLS; c++) {
-            const k = `${r},${c}`;
-            const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
-            rect.setAttribute('x', c*TILE + 0.5);
-            rect.setAttribute('y', r*TILE + 0.5);
-            rect.setAttribute('width',  TILE-1);
-            rect.setAttribute('height', TILE-1);
-
-            let cls = 'gc-neutral';
-            if (occ.has(k)) {
-                cls = 'gc-blocked';
-            } else if (qmap.has(k)) {
-                const qi = qmap.get(k);
-                cls = (selectedRoomType && qi.roomType===selectedRoomType) ? 'gc-queue' : 'gc-queue-other';
-            } else if (selectedRoomType) {
-                cls = 'gc-free';
-            }
-            rect.setAttribute('class', cls);
-            rect.dataset.r = r; rect.dataset.c = c;
-            rect.addEventListener('mousedown',  e => onCellDown(e, r, c));
-            rect.addEventListener('mouseenter', e => onCellEnter(e, r, c));
-            rect.addEventListener('mouseleave', onCellLeave);
-            svg.appendChild(rect);
-        }
-    }
-
-    // ── Queue icons ──
-    buildQueue.forEach(item => {
-        if (item.floor !== currentFloor) return;
-        let minR=99,maxR=0,minC=99,maxC=0;
-        item.cells.forEach(k => {
-            const [rr,cc]=k.split(',').map(Number);
-            minR=Math.min(minR,rr); maxR=Math.max(maxR,rr);
-            minC=Math.min(minC,cc); maxC=Math.max(maxC,cc);
-        });
-        const cx=(minC+maxC+1)/2*TILE, cy=(minR+maxR+1)/2*TILE;
-        const t = document.createElementNS('http://www.w3.org/2000/svg','text');
-        t.setAttribute('x',cx); t.setAttribute('y',cy);
-        const active = selectedRoomType && item.roomType===selectedRoomType;
-        t.setAttribute('class','gc-room-icon '+(active?'active':'inactive'));
-        t.textContent = ROOMS_DB[item.roomType]?.icon || '❓';
-        svg.appendChild(t);
-    });
-
-    // Refresh constructed rooms overlay
-    drawAllRoomsOverlay();
+function changeAbilityLevel(abilityId, newLevel) {
+  const ability = getAbility(abilityId);
+  if (!gameState.unlockedAbilities[abilityId]) { addNotification(`❌ Способность не изучена!`, "error"); return; }
+  const prog = gameState.abilitiesProgress[abilityId];
+  if (newLevel > 0 && prog && newLevel > prog.currentLevel) { addNotification(`❌ Уровень ${newLevel} не открыт!`, "error"); return; }
+  const oldLevel = gameState.teraflops.allocation[abilityId] || 0;
+  if (newLevel === oldLevel) return;
+  const diff = getAbilityCost(ability, newLevel) - getAbilityCost(ability, oldLevel);
+  if (gameState.teraflops.used + diff > gameState.teraflops.total) { addNotification(`❌ Недостаточно TF!`, "error"); return; }
+  gameState.teraflops.allocation[abilityId] = newLevel;
+  if (newLevel > 0 && !gameState.abilitiesProgress[abilityId]) gameState.abilitiesProgress[abilityId] = { currentLevel: 1, progress: 0, isFrozen: false };
+  if (newLevel === 0 && ability.type === 'active' && gameState.cooldowns[abilityId]) { gameState.abilitiesProgress[abilityId].isFrozen = true; addNotification(`❄️ Кулдаун заморожен!`, "warning"); }
+  else if (newLevel > 0 && gameState.abilitiesProgress[abilityId]?.isFrozen) { gameState.abilitiesProgress[abilityId].isFrozen = false; }
+  updateTeraflopsUsed(); updateUI(); draw();
 }
 
-// ════════════════════════════════════════════════════════
-//  PREVIEW OVERLAY  (drawn on top, pointer-events:none)
-// ════════════════════════════════════════════════════════
-function clearPreview() {
-    const svg = document.getElementById('constructionGridSvg');
-    svg.querySelectorAll('.preview-el').forEach(e=>e.remove());
+function unlockCurrentAbility() {
+  if (!currentOpenAbility || !canUnlockAbility(currentOpenAbility)) return;
+  const ability = getAbility(currentOpenAbility);
+  gameState.learningPoints -= ability.unlockCost;
+  gameState.unlockedAbilities[currentOpenAbility] = true;
+  gameState.teraflops.allocation[currentOpenAbility] = 0;
+  gameState.abilitiesProgress[currentOpenAbility] = { currentLevel: 1, progress: 0, isFrozen: false };
+  updateTeraflopsUsed();
+  const crossMsg = ability.isCrossAbility ? ' (без дестабилизации!)' : '';
+  addNotification(`✅ Изучено: ${ability.name}${crossMsg}. Выделите Терафлопсы для активации.`, "success");
+  updateUI(); draw();
 }
 
-function drawPreview(r1, c1, r2, c2, mode) {
-    // mode: 'add' | 'del'
-    clearPreview();
-    const svg  = document.getElementById('constructionGridSvg');
-    const minR = Math.min(r1,r2), maxR = Math.max(r1,r2);
-    const minC = Math.min(c1,c2), maxC = Math.max(c1,c2);
-    const occ  = getOccupiedCells();
-    const qmap = getQueueCellMap();
-
-    for (let r = minR; r <= maxR; r++) {
-        for (let c = minC; c <= maxC; c++) {
-            const k = `${r},${c}`;
-            let cls;
-            if (mode === 'del') {
-                // Only highlight cells that are actually erasable
-                if (!qmap.has(k)) continue;
-                const item = qmap.get(k);
-                if (selectedRoomType && item.roomType !== selectedRoomType) continue;
-                if (item.committed) continue; // can't erase committed rooms
-                cls = 'gc-preview-del';
-            } else {
-                if (occ.has(k)) {
-                    cls = 'gc-preview-bad'; // physically occupied
-                } else if (qmap.has(k) && qmap.get(k).roomType !== selectedRoomType) {
-                    cls = 'gc-preview-bad'; // different room type in queue — conflict
-                } else {
-                    cls = 'gc-preview-add'; // free or same-type queue (extend/merge)
-                }
-            }
-            const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
-            rect.setAttribute('x',      c*TILE + 0.5);
-            rect.setAttribute('y',      r*TILE + 0.5);
-            rect.setAttribute('width',  TILE - 1);
-            rect.setAttribute('height', TILE - 1);
-            rect.setAttribute('class',  cls);
-            rect.setAttribute('pointer-events','none');
-            rect.classList.add('preview-el');
-            svg.appendChild(rect);
-        }
-    }
-
-    // Dimensions hint
-    const hint = document.getElementById('dragHint');
-    hint.textContent = `${maxC-minC+1} × ${maxR-minR+1}`;
-    hint.style.display = 'block';
-    // position near cursor — handled in onCellEnter
+function accelerateProgress() {
+  if (!currentOpenAbility || gameState.learningPoints < 1) { addNotification(`❌ Нужно 1 очко!`, "error"); return; }
+  const prog = gameState.abilitiesProgress[currentOpenAbility];
+  const ability = getAbility(currentOpenAbility);
+  if (!prog || prog.currentLevel >= ability.maxLevel) return;
+  gameState.learningPoints -= 1;
+  gainProgress(currentOpenAbility, 25);
+  addNotification(`⚡ Ускорено! Прогресс: ${Math.floor(prog.progress)}%`, "success");
+  updateUI(); draw();
 }
 
-// ════════════════════════════════════════════════════════
-//  MOUSE HANDLERS ON GRID CELLS
-// ════════════════════════════════════════════════════════
-function onCellDown(e, r, c) {
-    if (!isConstruction) return;
-    e.preventDefault();
-
-    if (e.button === 0) {            // ── LMB: mark ──
-        if (isRightDrag) return;
-        if (!selectedRoomType) return;
-        const occ = getOccupiedCells();
-        if (occ.has(`${r},${c}`)) return;
-        isDragging = true; dragMoved = false;
-        dragA = {r,c}; dragB = {r,c};
-        // Immediately create preview queue item for feedback
-        previewQueueItem = {
-            id: 'preview',
-            floor: currentFloor,
-            roomType: selectedRoomType,
-            cells: new Set([`${r},${c}`]),
-            status: 'marking'
-        };
-        updatePreviewUI();
-        updateLmbPreview();
-    } else if (e.button === 2) {     // ── RMB: erase / deselect ──
-        if (isDragging) return;
-        isRightDrag = true; dragMoved = false;
-        rdragA = {r,c}; rdragB = {r,c};
-        // Switch to broom cursor during erase
-        const svg = document.getElementById('constructionGridSvg');
-        if (svg && selectedRoomType) svg.classList.add('erasing');
-        updateRmbPreview();
-    }
+function useActiveAbility() {
+  if (!currentOpenAbility) return;
+  const ability = getAbility(currentOpenAbility);
+  if (gameState.cooldowns[currentOpenAbility] && Date.now() < gameState.cooldowns[currentOpenAbility]) return;
+  gameState.cooldowns[currentOpenAbility] = Date.now() + (ability.cooldown * 1000);
+  if (gameState.abilitiesProgress[currentOpenAbility]) { gainProgress(currentOpenAbility, 10); }
+  addNotification(`🔹 Активировано: ${ability.name} (+10% прокачка)`, "success"); updateUI(); draw();
 }
 
-function onCellEnter(e, r, c) {
-    if (!isConstruction) return;
-
-    // ── Update drag end for LMB ──
-    if (isDragging && dragA) {
-        dragB = {r,c}; dragMoved = true;
-        updateLmbPreview();
-        positionHint(e);
+function startProgressTimer() {
+  setInterval(() => {
+    const now = Date.now();
+    for (let id in gameState.teraflops.allocation) {
+      const allocatedLevel = gameState.teraflops.allocation[id];
+      if (allocatedLevel === 0) continue;
+      const ability = getAbility(id);
+      const prog = gameState.abilitiesProgress[id];
+      if (!prog || prog.currentLevel >= ability.maxLevel) continue;
+      if (ability.type === 'active' && prog.isFrozen) continue;
+      if (ability.type === 'active' && gameState.cooldowns[id]) {
+        if (now < gameState.cooldowns[id]) continue;
+        else delete gameState.cooldowns[id];
+      }
+      if (allocatedLevel < prog.currentLevel) continue;
+      gainProgress(id, allocatedLevel);
     }
-    // ── Update drag end for RMB ──
-    if (isRightDrag && rdragA) {
-        rdragB = {r,c}; dragMoved = true;
-        updateRmbPreview();
-        positionHint(e);
-    }
+    updateUI(); draw();
+  }, 1000);
 }
 
-function onCellLeave() {
-    // keep drag going — handled by window mouseup
+function updateUI() {
+  const available = gameState.teraflops.total - gameState.teraflops.used;
+  document.getElementById('hud-tf-text').textContent = `${available}/${gameState.teraflops.total}`;
+  document.getElementById('hud-bar-fill').style.width = `${(available / gameState.teraflops.total) * 100}%`;
+  document.getElementById('hud-points-text').textContent = gameState.learningPoints;
+  const typeEl = document.getElementById('header-type');
+  typeEl.textContent = gameState.selectedType ? AI_NAMES[gameState.selectedType] : 'Не выбран';
+  typeEl.style.color = gameState.selectedType ? (AI_COLORS[gameState.selectedType] || 'var(--neon-yellow)') : 'var(--neon-yellow)';
+  if (currentOpenAbility && !sliderDrag) openAbilityPanel(currentOpenAbility);
 }
 
-function positionHint(e) {
-    const hint = document.getElementById('dragHint');
-    const rect = document.getElementById('mainCanvas').getBoundingClientRect();
-    hint.style.left = (e.clientX - rect.left + 14) + 'px';
-    hint.style.top  = (e.clientY - rect.top  - 28) + 'px';
-}
+const sliderEl = document.getElementById('tf-slider');
 
-function updateLmbPreview() {
-    if (!dragA || !dragB || !selectedRoomType) return;
-    const occ  = getOccupiedCells();
-    const qmap = getQueueCellMap();
-    const minR = Math.min(dragA.r,dragB.r), maxR = Math.max(dragA.r,dragB.r);
-    const minC = Math.min(dragA.c,dragB.c), maxC = Math.max(dragA.c,dragB.c);
-
-    // Per-cell preview (handles bad/add visuals internally)
-    drawPreview(dragA.r, dragA.c, dragB.r, dragB.c, 'add');
-
-    // Count valid cells for the preview queue item (excludes occupied + other-type queue)
-    if (previewQueueItem) {
-        const cells = new Set();
-        for (let r=minR; r<=maxR; r++)
-            for (let c=minC; c<=maxC; c++) {
-                const k = `${r},${c}`;
-                if (!occ.has(k) && !(qmap.has(k) && qmap.get(k).roomType !== selectedRoomType))
-                    cells.add(k);
-            }
-        previewQueueItem.cells = cells;
-        updatePreviewUI();
-    }
-}
-
-function updateRmbPreview() {
-    if (!rdragA || !rdragB) return;
-    drawPreview(rdragA.r,rdragA.c,rdragB.r,rdragB.c, 'del');
-}
-
-// ════════════════════════════════════════════════════════
-//  MOUSEUP — commit drag
-// ════════════════════════════════════════════════════════
-window.addEventListener('mouseup', e => {
-    if (!isConstruction) return;
-
-    if (e.button === 0 && isDragging) {
-        isDragging = false;
-        // Remove preview item before committing real one
-        previewQueueItem = null;
-        updatePreviewUI();
-        commitMark();
-        dragA = dragB = null;
-        clearPreview();
-        document.getElementById('dragHint').style.display = 'none';
-    }
-
-    if (e.button === 2 && isRightDrag) {
-        isRightDrag = false;
-        // Restore hammer cursor
-        const svg = document.getElementById('constructionGridSvg');
-        if (svg) svg.classList.remove('erasing');
-
-        if (!dragMoved && rdragA) {
-            // ── Single right-click: deselect if cell is not in selected type's queue ──
-            const k = `${rdragA.r},${rdragA.c}`;
-            const qmap = getQueueCellMap();
-            const onSelected = qmap.has(k) && selectedRoomType &&
-                               qmap.get(k).roomType === selectedRoomType;
-            if (!onSelected) {
-                hideRoomTooltip(); // ← добавить
-                selectedRoomType = null;
-                refreshRoomList();
-                updateSelectedHint();
-                updateConstructionPanels();
-                drawCGrid();
-                rdragA = rdragB = null;
-                clearPreview();
-                document.getElementById('dragHint').style.display = 'none';
-                return;
-            }
-        }
-
-        commitErase();
-        rdragA = rdragB = null;
-        clearPreview();
-        document.getElementById('dragHint').style.display = 'none';
-    }
-});
-
-window.addEventListener('contextmenu', e => { if (isConstruction) e.preventDefault(); });
-
-function commitMark() {
-    if (!dragA || !selectedRoomType) return;
-    hideRoomTooltip();
-    const B = dragB || dragA;
-    const minR=Math.min(dragA.r,B.r), maxR=Math.max(dragA.r,B.r);
-    const minC=Math.min(dragA.c,B.c), maxC=Math.max(dragA.c,B.c);
-    const occ  = getOccupiedCells();
-    const qmap = getQueueCellMap();
-    const newCells = [];
-    for (let r=minR;r<=maxR;r++)
-        for (let c=minC;c<=maxC;c++) {
-            const k=`${r},${c}`;
-            if (occ.has(k)) continue;                                          // physically occupied
-            if (qmap.has(k) && qmap.get(k).roomType !== selectedRoomType) continue; // other type — skip
-            newCells.push(k);
-        }
-    if (!newCells.length) return;
-
-    const ns = new Set(newCells);
-    let merged = false;
-    for (const item of buildQueue) {
-        if (item.floor !== currentFloor || item.roomType !== selectedRoomType) continue;
-        if (item.committed && buildingState && buildingState.id === item.id) continue; // actively building
-        // merge if adjacent OR if overlap with existing cells
-        const adj = [...item.cells].some(k => {
-            const [rr,cc] = k.split(',').map(Number);
-            return [[rr-1,cc],[rr+1,cc],[rr,cc-1],[rr,cc+1]].some(([nr,nc]) => ns.has(`${nr},${nc}`));
-        });
-        if (adj || [...ns].some(k => item.cells.has(k))) {
-            newCells.forEach(k => item.cells.add(k));
-            merged = true; break;
-        }
-    }
-    if (!merged) {
-        buildQueue.push({ id:Date.now(), floor:currentFloor, roomType:selectedRoomType, cells:ns, committed:false });
-    }
-    _queueDomIds = []; // force full DOM rebuild so tile count refreshes
-    updateQueueUI();
-    drawCGrid();
-}
-
-function commitErase() {
-    if (!rdragA) return;
-    const B = rdragB || rdragA;
-    const minR=Math.min(rdragA.r,B.r), maxR=Math.max(rdragA.r,B.r);
-    const minC=Math.min(rdragA.c,B.c), maxC=Math.max(rdragA.c,B.c);
-    let changed = false;
-    for (let i=buildQueue.length-1;i>=0;i--) {
-        const item = buildQueue[i];
-        if (item.floor!==currentFloor) continue;
-        // Only erase cells of selected type (or all if none selected)
-        if (selectedRoomType && item.roomType!==selectedRoomType) continue;
-        for (let r=minR;r<=maxR;r++)
-            for (let c=minC;c<=maxC;c++) {
-                const k=`${r},${c}`;
-                if (item.cells.delete(k)) changed=true;
-            }
-        if (item.cells.size===0) buildQueue.splice(i,1);
-    }
-    if (changed) { _queueDomIds = []; updateQueueUI(); drawCGrid(); }
-}
-
-// ════════════════════════════════════════════════════════
-//  QUEUE UI  (структура DOM не пересоздаётся во время DnD)
-// ════════════════════════════════════════════════════════
-
-// Два режима обновления:
-//   rebuildQueueDOM()  — полная перерисовка (добавление/удаление элементов)
-//   tickQueueTimers()  — только обновляет прогресс/таймер уже существующих элементов
-
-let _queueDomIds = [];   // порядок id в DOM — чтобы не пересоздавать без нужды
-
-function updateQueueUI() {
-    // Show ALL items across all floors
-    const all = buildQueue;
-    const ids = all.map(i => i.id);
-    if (JSON.stringify(ids) !== JSON.stringify(_queueDomIds)) {
-        rebuildQueueDOM(all);
-        _queueDomIds = ids.slice();
-    } else {
-        tickQueueTimers(all);
-    }
-
-    const btn = document.getElementById('cBuildBtn');
-    const cnt = document.getElementById('cQueueCount');
-
-    const allUncommitted = buildQueue.filter(i => !i.committed);
-    const allCommitted   = buildQueue.filter(i =>  i.committed);
-
-    // Badge shows only uncommitted (pending) rooms — resets to 0 after Построить
-    cnt.textContent   = allUncommitted.length;
-    cnt.style.display = allUncommitted.length ? '' : 'none';
-
-    // Button state follows exact flow:
-    // • Uncommitted rooms exist → active "Построить (N)", no special color change while building
-    // • Building + no uncommitted → disabled grey "Построить (0)"
-    // • Idle + no uncommitted → disabled grey "Построить (0)"
-    btn.classList.remove('new-batch');
-    if (allUncommitted.length) {
-        btn.disabled    = false;
-        btn.textContent = `⚙️ Построить (${allUncommitted.length})`;
-    } else if (isBuildingActive) {
-        btn.disabled    = true;
-        btn.textContent = '⚙️ Построить (0)';
-    } else {
-        btn.disabled    = true;
-        btn.textContent = '⚙️ Построить (0)';
-    }
-}
-
-// ── Preview queue item UI (shown during active drag — "Разметка" status) ──
-function updatePreviewUI() {
-    const list = document.getElementById('cQueueList');
-    if (!list) return;
-    const existingEl = list.querySelector('.c-queue-item[data-id="preview"]');
-
-    if (!previewQueueItem) {
-        if (existingEl) existingEl.remove();
-        // If queue is now empty and no preview, restore empty message if needed
-        if (!buildQueue.length &&
-            !list.querySelector('.c-queue-item') &&
-            !list.querySelector('.c-queue-empty')) {
-            list.innerHTML = '<div class="c-queue-empty">Очередь пуста.<br/>ЛКМ — разметить, ПКМ — удалить.</div>';
-        }
-        return;
-    }
-
-    const rd = ROOMS_DB[previewQueueItem.roomType] || {};
-    const cost = previewQueueItem.cells.size * (rd.cost || 2);
-    const html = `<div class="c-queue-item marking" data-id="preview">
-        <div class="c-queue-item-name">${rd.icon||'❓'} ${rd.name||previewQueueItem.roomType}</div>
-        <div class="c-queue-item-meta">${previewQueueItem.cells.size} тайл(ов) • Этаж ${previewQueueItem.floor} • ${cost} металла</div>
-        <div class="c-queue-item-marking-label">📐 Разметка...</div>
+function renderTfSlider(ability, isUnlocked, allocLevel, prog, discount) {
+  const maxLevel = ability.maxLevel;
+  const maxAllowed = isUnlocked ? prog.currentLevel : 0;
+  sliderEl.className = 'tf-slider' + (isUnlocked ? '' : ' disabled');
+  let html = `<div class="tf-area">
+    <div class="tf-slider-track"></div>
+    <div class="tf-slider-fill" style="width:${(allocLevel/maxLevel)*100}%"></div>`;
+  for (let i = 0; i <= maxLevel; i++) {
+    const locked = i > maxAllowed;
+    const cost = getAbilityCost(ability, i);
+    const baseCost = Math.round(ability.baseCost * Math.pow(1.5, i - 1));
+    const isDisc = discount && i > 0 && baseCost !== cost;
+    // НОВОЕ: подсветка доступного уровня когда TF не выделены
+    const available = isUnlocked && allocLevel === 0 && i === 1 && prog.currentLevel >= 1;
+    html += `<div class="tf-stop ${locked?'locked':''} ${i===allocLevel?'current':''} ${available?'available':''}" style="left:${(i/maxLevel)*100}%">
+      <div class="tf-stop-lvl">${i===0?'Изъять':'Lv.'+i}</div>
+      <div class="tf-stop-notch"></div>
+      <div class="tf-stop-cost">${locked?'🔒':(isDisc?`<span class="old">${baseCost}</span>`:'')+'⚡'+cost+' TF'}</div>
     </div>`;
-
-    if (existingEl) {
-        existingEl.outerHTML = html;
-    } else {
-        // Remove empty message if present
-        const emptyEl = list.querySelector('.c-queue-empty');
-        if (emptyEl) emptyEl.remove();
-        list.insertAdjacentHTML('beforeend', html);
-    }
+  }
+  html += `<div class="tf-slider-handle" id="tf-slider-handle" style="left:${(allocLevel/maxLevel)*100}%"></div></div>`;
+  sliderEl.innerHTML = html;
 }
 
-function rebuildQueueDOM(all) {
-    const list  = document.getElementById('cQueueList');
-    const total = document.getElementById('cQueueTotal');
-
-    if (!all.length) {
-        list.innerHTML = '<div class="c-queue-empty">Очередь пуста.<br/>ЛКМ — разметить, ПКМ — удалить.</div>';
-        total.style.display = 'none';
-        return;
-    }
-
-    function renderItem(item) {
-        const rd = ROOMS_DB[item.roomType] || {};
-        const cost = item.cells.size * (rd.cost || 2);
-        const isBuilding = buildingState && buildingState.id === item.id;
-        const totalTime  = (BUILD_TIMES[item.roomType] || 20) * 1000;
-        const progress   = item.progress || 0;
-        const pct     = Math.min(100, Math.round(progress / totalTime * 100));
-        const remSec  = Math.ceil((totalTime - progress) / 1000);
-        const statusCls  = isBuilding ? 's-building' : 's-marked';
-        const statusText = isBuilding ? 'Строится' : 'Размечено';
-        const allIdx  = all.indexOf(item);
-        const allFirst = allIdx === 0;
-        const allLast  = allIdx === all.length - 1;
-        // floor badge — clicking jumps to that floor
-        const isCurrentFloor = item.floor === currentFloor;
-        const floorBadge = `<span class="c-queue-floor-link${isCurrentFloor ? ' current' : ''}" onclick="switchFloor(${item.floor})" title="Перейти на этаж ${item.floor}">🏢 Этаж ${item.floor}</span>`;
-        return `<div class="c-queue-item${isBuilding ? ' building' : ''}"
-                     data-id="${item.id}"
-                     data-committed="${item.committed ? '1' : '0'}"
-                     style="border-left-color:${isBuilding ? '#00e5ff' : item.committed ? '#ffaa33' : '#4a9aff'}">
-            <div class="c-queue-order-ctrl">
-                <button class="c-queue-order-btn" ${allFirst ? 'disabled' : ''} onclick="moveQueueItem(${item.id},-1)">▲</button>
-                <div class="c-queue-drag-handle" data-drag-id="${item.id}">⠿</div>
-                <button class="c-queue-order-btn" ${allLast ? 'disabled' : ''} onclick="moveQueueItem(${item.id},1)">▼</button>
-            </div>
-            <button class="c-queue-cancel" onclick="removeQueueItem(${item.id})">✕</button>
-            <div class="c-queue-item-name">${rd.icon || '❓'} ${rd.name || item.roomType}${isBuilding ? ' 🔨' : ''} <span class="c-queue-status ${statusCls}">${statusText}</span></div>
-            <div class="c-queue-item-meta">${item.cells.size} тайл(ов) • ${floorBadge} • ${cost} металла</div>
-            <div class="c-queue-item-timer" style="display:${(isBuilding || progress > 0) ? 'block' : 'none'}">
-                <div class="c-queue-timer" style="color:${isBuilding ? '#00e5ff' : '#778'}">
-                    ${isBuilding ? `⏱ ${remSec}с осталось` : `⏸ ${Math.round(progress / 1000)}с / ${Math.round(totalTime / 1000)}с`}
-                </div>
-                <div class="c-queue-progress"><div class="c-queue-progress-bar" style="width:${pct}%;${isBuilding ? '' : 'opacity:0.4'}"></div></div>
-            </div>
-        </div>`;
-    }
-
-    // Group by committed vs uncommitted, preserve order within each group
-    const committed   = all.filter(i =>  i.committed);
-    const uncommitted = all.filter(i => !i.committed);
-    const hasBoth     = committed.length > 0 && uncommitted.length > 0;
-
-    let html = '';
-    committed.forEach(item => { html += renderItem(item); });
-    if (hasBoth) {
-        html += `<div class="c-queue-batch-divider">Ожидают запуска</div>`;
-    }
-    uncommitted.forEach(item => { html += renderItem(item); });
-
-    list.innerHTML = html;
-
-    list.querySelectorAll('.c-queue-drag-handle').forEach(handle => {
-        handle.addEventListener('pointerdown', onHandlePointerDown);
-    });
-
-    const totalCost  = all.reduce((s, i) => s + (i.cells.size * (ROOMS_DB[i.roomType]?.cost || 2)), 0);
-    const totalTiles = all.reduce((s, i) => s + i.cells.size, 0);
-    total.style.display = '';
-    total.innerHTML = `
-        <div class="c-queue-total-line"><span>Тайлов:</span><span>${totalTiles}</span></div>
-        <div class="c-queue-total-line bold"><span>Итого металла:</span><span>${totalCost}</span></div>`;
+function sliderRatio(e) {
+  const area = sliderEl.querySelector('.tf-area');
+  if (!area) return 0;
+  const r = area.getBoundingClientRect();
+  return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
 }
 
-function tickQueueTimers(all) {
-    all.forEach(item => {
-        const el = document.querySelector(`.c-queue-item[data-id="${item.id}"]`);
-        if (!el) return;
-        const rd         = ROOMS_DB[item.roomType]||{};
-        const isBuilding = buildingState && buildingState.id === item.id;
-        const totalTime  = (BUILD_TIMES[item.roomType]||20)*1000;
-        const progress   = item.progress || 0;
-        const pct        = Math.min(100, Math.round(progress / totalTime * 100));
-        const remSec     = Math.ceil((totalTime - progress) / 1000);
-
-        const cost   = item.cells.size * (rd.cost||2);
-        const isCurrentFloor = item.floor === currentFloor;
-        const floorBadge = `<span class="c-queue-floor-link${isCurrentFloor ? ' current' : ''}" onclick="switchFloor(${item.floor})" title="Перейти на этаж ${item.floor}">🏢 Этаж ${item.floor}</span>`;
-        const metaEl = el.querySelector('.c-queue-item-meta');
-        if (metaEl) metaEl.innerHTML = `${item.cells.size} тайл(ов) • ${floorBadge} • ${cost} металла`;
-
-        const timerEl   = el.querySelector('.c-queue-item-timer');
-        const timerText = el.querySelector('.c-queue-timer');
-        const barEl     = el.querySelector('.c-queue-progress-bar');
-        if (timerEl) timerEl.style.display = (isBuilding || progress > 0) ? 'block' : 'none';
-        if (timerText) {
-            timerText.style.color = isBuilding ? '#00e5ff' : '#778';
-            timerText.textContent = isBuilding
-                ? `⏱ ${remSec}с осталось`
-                : `⏸ ${Math.round(progress/1000)}с / ${Math.round(totalTime/1000)}с`;
-        }
-        if (barEl) {
-            barEl.style.width   = pct + '%';
-            barEl.style.opacity = isBuilding ? '1' : '0.4';
-        }
-        el.style.borderLeftColor = isBuilding ? '#00e5ff' : (item.committed ? '#ffaa33' : '#4a9aff');
-        el.classList.toggle('building', !!isBuilding);
-        const nameEl = el.querySelector('.c-queue-item-name');
-        if (nameEl) {
-            const statusBadge = `<span class="c-queue-status ${isBuilding?'s-building':'s-marked'}">${isBuilding?'Строится':'Размечено'}</span>`;
-            nameEl.innerHTML = `${rd.icon||'❓'} ${rd.name||item.roomType}${isBuilding?' 🔨':''} ${statusBadge}`;
-        }
-    });
-
-    // Пересчёт итоговой строки
-    const total = document.getElementById('cQueueTotal');
-    if (total && all.length) {
-        const totalTiles = all.reduce((s,i) => s + i.cells.size, 0);
-        const totalCost  = all.reduce((s,i) => s + i.cells.size * (ROOMS_DB[i.roomType]?.cost||2), 0);
-        total.innerHTML = `
-            <div class="c-queue-total-line"><span>Тайлов:</span><span>${totalTiles}</span></div>
-            <div class="c-queue-total-line bold"><span>Итого металла:</span><span>${totalCost}</span></div>`;
-    }
-}
-
-// ════════════════════════════════════════════════════════
-//  POINTER-BASED DRAG & DROP — исправленный
-//  Позиция вставки определяется по середине каждого элемента:
-//  курсор выше середины → вставить ПЕРЕД, ниже → вставить ПОСЛЕ.
-// ════════════════════════════════════════════════════════
-let _dnd = null;
-
-function onHandlePointerDown(e) {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    const handle = e.currentTarget;
-    const itemEl = handle.closest('.c-queue-item');
-    const id     = parseInt(handle.dataset.dragId);
-    const list   = document.getElementById('cQueueList');
-
-    // Визуальный призрак
-    const ghost = itemEl.cloneNode(true);
-    ghost.style.cssText = `
-        position:fixed; pointer-events:none; z-index:9999;
-        width:${itemEl.offsetWidth}px; opacity:0.85;
-        background:#1a2535; border:1px solid #00e5ff;
-        border-radius:6px; padding:8px; font-size:12px;
-        box-shadow:0 8px 24px rgba(0,0,0,0.6);
-        transform:rotate(1.5deg); transition:none;
-    `;
-    document.body.appendChild(ghost);
-
-    const elRect  = itemEl.getBoundingClientRect();
-    const offsetY = e.clientY - elRect.top;
-    itemEl.classList.add('dragging-item');
-
-    // insertRef: { el, position:'before'|'after' } | null (append at end)
-    _dnd = { id, itemEl, ghost, list, offsetY, insertRef: null };
-    _positionGhost(e.clientX, e.clientY);
-
-    document.addEventListener('pointermove',   _onDndMove, { passive: false });
-    document.addEventListener('pointerup',     _onDndUp,   { once: true });
-    document.addEventListener('pointercancel', _onDndUp,   { once: true });
-}
-
-function _positionGhost(cx, cy) {
-    if (!_dnd) return;
-    _dnd.ghost.style.left = (cx + 12) + 'px';
-    _dnd.ghost.style.top  = (cy - _dnd.offsetY) + 'px';
-}
-
-function _clearDndIndicators() {
-    document.querySelectorAll('.c-queue-item').forEach(el => {
-        el.classList.remove('drag-insert-before', 'drag-insert-after');
-    });
-}
-
-function _onDndMove(e) {
-    if (!_dnd) return;
-    e.preventDefault();
-    _positionGhost(e.clientX, e.clientY);
-    _clearDndIndicators();
-
-    // Все элементы очереди кроме перетаскиваемого
-    const els = [..._dnd.list.querySelectorAll('.c-queue-item:not(.dragging-item)')];
-    let insertRef = null; // { el, position }
-
-    for (const el of els) {
-        const r   = el.getBoundingClientRect();
-        const mid = (r.top + r.bottom) / 2;
-        if (e.clientY < mid) {
-            // Курсор выше середины → вставить ПЕРЕД этим элементом
-            insertRef = { el, position: 'before' };
-            el.classList.add('drag-insert-before');
-            break;
-        }
-    }
-
-    if (!insertRef && els.length) {
-        // Курсор ниже всех элементов → вставить ПОСЛЕ последнего
-        const last = els[els.length - 1];
-        insertRef = { el: last, position: 'after' };
-        last.classList.add('drag-insert-after');
-    }
-
-    _dnd.insertRef = insertRef;
-}
-
-function _onDndUp() {
-    if (!_dnd) return;
-    document.removeEventListener('pointermove', _onDndMove);
-    _clearDndIndicators();
-
-    const { id, itemEl, ghost, insertRef } = _dnd;
-    _dnd = null;
-    ghost.remove();
-    itemEl.classList.remove('dragging-item');
-
-    if (insertRef) {
-        const targetId = parseInt(insertRef.el.dataset.id);
-        if (targetId && targetId !== id) {
-            _commitReorder(id, targetId, insertRef.position);
-        }
-    }
-}
-
-function _commitReorder(fromId, toId, position /* 'before' | 'after' */) {
-    const fromIdx = buildQueue.findIndex(i => i.id === fromId);
-    const toIdx   = buildQueue.findIndex(i => i.id === toId);
-    if (fromIdx < 0 || toIdx < 0) return;
-
-    // Если строящийся элемент перемещается — пауза, потом перезапуск
-    const needRestart = buildingState && (buildingState.id === fromId || buildingState.id === toId);
-    if (needRestart) {
-        clearInterval(buildingState.interval);
-        buildingState = null;
-    }
-
-    // Удаляем перемещаемый элемент
-    const [moved] = buildQueue.splice(fromIdx, 1);
-
-    // Находим новый индекс цели (после удаления fromIdx мог сдвинуться)
-    const newToIdx = buildQueue.findIndex(i => i.id === toId);
-
-    if (position === 'after') {
-        buildQueue.splice(newToIdx + 1, 0, moved);
-    } else {
-        buildQueue.splice(newToIdx, 0, moved);
-    }
-
-    _queueDomIds = [];
-    updateQueueUI();
-    drawCGrid();
-
-    if (needRestart && isBuildingActive) {
-        setTimeout(() => startNextBuild(), 50);
-    }
-}
-
-function moveQueueItem(id, dir) {
-    const idx = buildQueue.findIndex(i => i.id === id);
-    if (idx < 0) return;
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= buildQueue.length) return;
-
-    const needRestart = buildingState && (buildingState.id === id || buildingState.id === buildQueue[newIdx].id);
-    if (needRestart) {
-        clearInterval(buildingState.interval);
-        buildingState = null;
-    }
-
-    const [item] = buildQueue.splice(idx, 1);
-    buildQueue.splice(newIdx, 0, item);
-    _queueDomIds = [];
-    updateQueueUI();
-    drawCGrid();
-
-    if (needRestart && isBuildingActive) {
-        setTimeout(() => startNextBuild(), 50);
-    }
-}
-
-function removeQueueItem(id) {
-    const item = buildQueue.find(i=>i.id===id);
-    if (!item) return;
-    if (buildingState && buildingState.id === id) {
-        clearInterval(buildingState.interval);
-        buildingState = null;
-    }
-    buildQueue = buildQueue.filter(i=>i.id!==id);
-    updateQueueUI(); drawCGrid();
-    if (!buildingState && isBuildingActive) startNextBuild();
-}
-
-// ════════════════════════════════════════════════════════
-//  BUILD TIMER SYSTEM
-// ════════════════════════════════════════════════════════
-const BUILD_TIMES = {
-    lab:25, air:15, energy:28, workshop:30, extWare:10,
-    extEnergy:20, hangar:30, common:12, dining:15, kitchen:13,
-    hygiene:12, storage:10, medical:28, farm:22, living:14
-};
-let buildingState = null;
-let isBuildingActive = false;
-
-function finalizeBuild() {
-    // Commit ALL uncommitted rooms across ALL floors, not just the current floor
-    const uncommitted = buildQueue.filter(i => !i.committed);
-    if (!uncommitted.length) return;
-
-    // Exit marking/placement mode
-    if (selectedRoomType) {
-        selectedRoomType = null;
-        refreshRoomList();
-        updateSelectedHint();
-        updateConstructionPanels();
-        drawCGrid();
-    }
-
-    // Commit all pending rooms — they join the build pipeline
-    uncommitted.forEach(i => { i.committed = true; });
-
-    // Immediately refresh UI so badge resets to 0 before build starts
-    _queueDomIds = [];
-    updateQueueUI();
-
-    // Resume time — building has started, time flows normally again
-    isPaused = false;
-    clearInterval(timeInterval);
-    timeInterval = setInterval(updateTime, 1000);
-    document.querySelectorAll('.playback-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('playBtn').classList.add('active');
-
-    // Start building if not already running
-    if (!isBuildingActive) {
-        isBuildingActive = true;
-        startNextBuild();
-    } else {
-        // Already building — just refresh UI so new items show as committed
-        _queueDomIds = [];
-        updateQueueUI();
-    }
-}
-
-function startNextBuild() {
-    // Build committed items from any floor, in queue order
-    const item = buildQueue.find(i => i.committed);
-    if (!item) {
-        isBuildingActive = false;
-        buildingState    = null;
-        updateQueueUI();
-        return;
-    }
-    const totalTime      = (BUILD_TIMES[item.roomType] || 20) * 1000;
-    const alreadyElapsed = item.progress || 0;
-    buildingState = { id: item.id, elapsed: alreadyElapsed, total: totalTime, interval: null };
-    buildingState.interval = setInterval(() => {
-        buildingState.elapsed += 100;
-        item.progress = buildingState.elapsed;
-        if (buildingState.elapsed >= buildingState.total) {
-            clearInterval(buildingState.interval);
-            buildingState = null;
-            constructedRooms[item.floor] = constructedRooms[item.floor] || [];
-            constructedRooms[item.floor].push(item);
-            buildQueue = buildQueue.filter(i => i.id !== item.id);
-            drawCGrid();
-            renderConstructedRooms();
-            startNextBuild();
-        } else {
-            updateQueueUI();
-        }
-    }, 100);
-    updateQueueUI();
-}
-
-// ════════════════════════════════════════════════════════
-//  UNIFIED ROOM TILE RENDERER (floor rooms + constructed)
-// ════════════════════════════════════════════════════════
-
-function renderConstructedRooms() {
-    drawCGrid();
-    drawAllRoomsOverlay();
-}
-
-function drawConstructedRoomsOverlay() {
-    drawAllRoomsOverlay();
-}
-
-function drawAllRoomsOverlay() {
-    let overlay = document.getElementById('allRoomsOverlay');
-    if (!overlay) {
-        overlay = document.createElementNS('http://www.w3.org/2000/svg','svg');
-        overlay.id = 'allRoomsOverlay';
-        overlay.setAttribute('viewBox','0 0 1100 600');
-        overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:visible;';
-        document.getElementById('isoGrid').appendChild(overlay);
-    }
-    overlay.innerHTML = '';
-
-    // Combine floor rooms + constructed rooms
-    const floorRooms = (FLOORS[currentFloor]?.rooms || []).map(r => ({
-        cells: roomToCells(r),
-        color: r.color || '#4a7aaa',
-        icon:  r.icon,
-        name:  r.name,
-        status: r.status,
-        isLift: r.isLift,
-        _room: r,
-        _isFloor: true
-    }));
-    const builtRooms = (constructedRooms[currentFloor] || []).map(item => {
-        const rd = ROOMS_DB[item.roomType] || {};
-        return {
-            cells: item.cells,
-            color: rd.color || '#4a7aaa',
-            icon:  rd.icon || '❓',
-            name:  rd.name || item.roomType,
-            status: 'online',
-            isLift: false,
-            _isFloor: false,
-            _item: item
-        };
-    });
-
-    [...floorRooms, ...builtRooms].forEach(entry => {
-        let minR=99,maxR=0,minC=99,maxC=0;
-        entry.cells.forEach(k => {
-            const [rr,cc]=k.split(',').map(Number);
-            minR=Math.min(minR,rr); maxR=Math.max(maxR,rr);
-            minC=Math.min(minC,cc); maxC=Math.max(maxC,cc);
-        });
-        const x = minC*TILE, y = minR*TILE;
-        const w = (maxC-minC+1)*TILE, h = (maxR-minR+1)*TILE;
-        const color = entry.color;
-        const isSelected = entry._room && entry._room === selectedTileRoom;
-        const isLift = entry.isLift;
-
-        const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-        g.style.cursor = 'pointer';
-        g.style.pointerEvents = 'all';
-
-        // Shadow / glow
-        const shadow = document.createElementNS('http://www.w3.org/2000/svg','rect');
-        shadow.setAttribute('x', x+3); shadow.setAttribute('y', y+3);
-        shadow.setAttribute('width', w-2); shadow.setAttribute('height', h-2);
-        shadow.setAttribute('rx','6');
-        shadow.setAttribute('fill', '#000');
-        shadow.setAttribute('fill-opacity', isLift ? '0.4' : '0.25');
-        g.appendChild(shadow);
-
-        // Main bg
-        const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
-        rect.setAttribute('x', x+1); rect.setAttribute('y', y+1);
-        rect.setAttribute('width', w-2); rect.setAttribute('height', h-2);
-        rect.setAttribute('rx','6');
-        rect.setAttribute('fill', color);
-        rect.setAttribute('fill-opacity', isSelected ? '0.55' : (isLift ? '0.38' : '0.28'));
-        rect.setAttribute('stroke', color);
-        rect.setAttribute('stroke-opacity', isSelected ? '1' : '0.75');
-        rect.setAttribute('stroke-width', isSelected ? '2.5' : '1.5');
-        g.appendChild(rect);
-
-        // Top shine strip
-        const shine = document.createElementNS('http://www.w3.org/2000/svg','rect');
-        shine.setAttribute('x', x+2); shine.setAttribute('y', y+2);
-        shine.setAttribute('width', w-4); shine.setAttribute('height', Math.min(8, h*0.2));
-        shine.setAttribute('rx','5');
-        shine.setAttribute('fill','#fff');
-        shine.setAttribute('fill-opacity','0.10');
-        shine.setAttribute('pointer-events','none');
-        g.appendChild(shine);
-
-        // Lift animated border
-        if (isLift) {
-            const liftRect = document.createElementNS('http://www.w3.org/2000/svg','rect');
-            liftRect.setAttribute('x', x+1); liftRect.setAttribute('y', y+1);
-            liftRect.setAttribute('width', w-2); liftRect.setAttribute('height', h-2);
-            liftRect.setAttribute('rx','6');
-            liftRect.setAttribute('fill','none');
-            liftRect.setAttribute('stroke','#6a9adf');
-            liftRect.setAttribute('stroke-opacity','0.5');
-            liftRect.setAttribute('stroke-width','1');
-            liftRect.setAttribute('stroke-dasharray','6 4');
-            liftRect.setAttribute('pointer-events','none');
-            g.appendChild(liftRect);
-        }
-
-        // Selection glow
-        if (isSelected) {
-            const glow = document.createElementNS('http://www.w3.org/2000/svg','rect');
-            glow.setAttribute('x', x-2); glow.setAttribute('y', y-2);
-            glow.setAttribute('width', w+4); glow.setAttribute('height', h+4);
-            glow.setAttribute('rx','8');
-            glow.setAttribute('fill','none');
-            glow.setAttribute('stroke', color);
-            glow.setAttribute('stroke-opacity','0.5');
-            glow.setAttribute('stroke-width','3');
-            glow.setAttribute('filter','url(#roomGlow)');
-            glow.setAttribute('pointer-events','none');
-            g.insertBefore(glow, g.firstChild);
-        }
-
-        // Icon
-        const icon = document.createElementNS('http://www.w3.org/2000/svg','text');
-        icon.setAttribute('x', x + w/2);
-        icon.setAttribute('y', y + h/2 - (h > 60 ? 10 : 0));
-        icon.setAttribute('text-anchor','middle');
-        icon.setAttribute('dominant-baseline','central');
-        icon.setAttribute('font-size', Math.min(32, Math.min(w,h)*0.42));
-        icon.setAttribute('pointer-events','none');
-        icon.textContent = entry.icon;
-        g.appendChild(icon);
-
-        // Name label (only if room tall enough)
-        if (h >= 60) {
-            const label = document.createElementNS('http://www.w3.org/2000/svg','text');
-            label.setAttribute('x', x + w/2);
-            label.setAttribute('y', y + h/2 + Math.min(20, h*0.28));
-            label.setAttribute('text-anchor','middle');
-            label.setAttribute('dominant-baseline','central');
-            label.setAttribute('font-size', Math.min(11, w/7+4));
-            label.setAttribute('fill', isLift ? '#6a9adf' : '#dde');
-            label.setAttribute('font-weight','600');
-            label.setAttribute('pointer-events','none');
-            // Truncate if too narrow
-            const maxChars = Math.floor(w / 7);
-            const txt = entry.name.length > maxChars ? entry.name.slice(0, maxChars-1)+'…' : entry.name;
-            label.textContent = txt;
-            g.appendChild(label);
-        }
-
-        // Status dot (top-right corner)
-        if (entry.status) {
-            const dotColor = entry.status==='online'?'#4ade80': entry.status==='warning'?'#fbbf24':'#ef4444';
-            const dotR = 5;
-            const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
-            dot.setAttribute('cx', x+w-dotR-4); dot.setAttribute('cy', y+dotR+4);
-            dot.setAttribute('r', dotR);
-            dot.setAttribute('fill', dotColor);
-            dot.setAttribute('pointer-events','none');
-            g.appendChild(dot);
-        }
-
-        // Lift pulse ring
-        if (isLift) {
-            const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
-            ring.setAttribute('cx', x+w-10); ring.setAttribute('cy', y+10);
-            ring.setAttribute('r','8');
-            ring.setAttribute('fill','rgba(106,154,223,0.2)');
-            ring.setAttribute('stroke','#6a9adf');
-            ring.setAttribute('stroke-opacity','0.4');
-            ring.setAttribute('stroke-width','1');
-            ring.setAttribute('pointer-events','none');
-            const anim = document.createElementNS('http://www.w3.org/2000/svg','animate');
-            anim.setAttribute('attributeName','r'); anim.setAttribute('values','5;12;5');
-            anim.setAttribute('dur','2s'); anim.setAttribute('repeatCount','indefinite');
-            ring.appendChild(anim);
-            const anim2 = document.createElementNS('http://www.w3.org/2000/svg','animate');
-            anim2.setAttribute('attributeName','opacity'); anim2.setAttribute('values','0.6;0;0.6');
-            anim2.setAttribute('dur','2s'); anim2.setAttribute('repeatCount','indefinite');
-            ring.appendChild(anim2);
-            g.appendChild(ring);
-        }
-
-        // Click handler — floor rooms open their panel, built rooms open a built-room panel
-        if (entry._isFloor) {
-            g.style.pointerEvents = 'all';
-            g.addEventListener('click', e => { e.stopPropagation(); selectRoom(entry._room); });
-        } else if (entry._item) {
-            g.style.pointerEvents = 'all';
-            g.addEventListener('click', e => { e.stopPropagation(); openBuiltRoomPanel(entry._item); });
-        }
-
-        overlay.appendChild(g);
-    });
-}
-
-// Call on floor switch to refresh overlay
-const _origRenderFloor = renderFloor;
-
-// ════════════════════════════════════════════════════════
-//  ROOM TYPE SELECTION PANEL
-// ════════════════════════════════════════════════════════
-function buildRoomListPanel() {
-    hideRoomTooltip();   // сбрасываем тултип при любой пересборке панели
-    const panel = document.getElementById('cBottomPanel');
-    panel.innerHTML = Object.entries(ROOMS_DB).map(([k,v]) => {
-        const fx = [];
-        if (v.oxygen)   fx.push(`O₂ ${v.oxygen>0?'+':''}${v.oxygen}%`);
-        if (v.heat)     fx.push(`T ${v.heat>0?'+':''}${v.heat}°`);
-        if (v.humidity) fx.push(`💧${v.humidity>0?'+':''}${v.humidity}%`);
-        if (v.noise)    fx.push(`🔇${v.noise}дБ`);
-        if (v.energy)   fx.push(`⚡+${v.energy}`);
-        const fxJson = JSON.stringify(fx).replace(/"/g,'&quot;');
-        return `<button class="c-room-btn ${selectedRoomType===k?'selected':''}"
-            onclick="selectRoomType('${k}')"
-            data-room-key="${k}"
-            data-tt-name="${v.name}"
-            data-tt-desc="${v.desc.replace(/"/g,'&quot;')}"
-            data-tt-cost="${v.cost}"
-            data-tt-fx="${fxJson}"
-        >${v.icon}</button>`;
-    }).join('');
-
-    panel.querySelectorAll('.c-room-btn').forEach(btn => {
-        btn.addEventListener('mouseenter', showRoomTooltip);
-        btn.addEventListener('mouseleave', hideRoomTooltip);
-    });
-
-    panel.addEventListener('scroll', hideRoomTooltip, { passive: true });
-
-    updateSelectedHint();
-}
-
-// ════════════════════════════════════════════════════════
-//  FLOATING ROOM TOOLTIP  (fixed-position, never clipped)
-// ════════════════════════════════════════════════════════
-
-function showRoomTooltip(e) {
-    const btn = e.currentTarget;
-    const tt  = document.getElementById('roomFloatTooltip');
-
-    const name = btn.dataset.ttName;
-    const desc = btn.dataset.ttDesc;
-    const cost = btn.dataset.ttCost;
-    let   fx   = [];
-    try { fx = JSON.parse(btn.dataset.ttFx || '[]'); } catch(_) {}
-
-    const fxHtml = fx.map(f => `<span class="tt-fx-tag">${f}</span>`).join('');
-    tt.innerHTML = `
-        <div class="tt-name">${name}</div>
-        <div class="tt-desc">${desc}</div>
-        <div class="tt-divider"></div>
-        <div class="tt-cost">${cost} металла за тайл</div>
-        ${fxHtml ? `<div class="tt-effects">${fxHtml}</div>` : ''}
-    `;
-
-    positionRoomTooltip(btn);
-    tt.classList.add('visible');
-}
-
-function positionRoomTooltip(btn) {
-    const tt   = document.getElementById('roomFloatTooltip');
-    const rect = btn.getBoundingClientRect();
-    const margin = 8;
-
-    // Measure without transition interference (tooltip is opacity:0 but in flow)
-    const ttW = tt.offsetWidth  || 210;
-    const ttH = tt.offsetHeight || 100;
-
-    let left = rect.left + rect.width / 2 - ttW / 2;
-
-    // Prefer above; flip below if not enough room
-    const spaceAbove = rect.top - margin;
-    const flipped = spaceAbove < ttH + 10;
-    let top = flipped ? rect.bottom + 10 : rect.top - ttH - 10;
-
-    left = Math.max(margin, Math.min(left, window.innerWidth  - ttW - margin));
-    top  = Math.max(margin, Math.min(top,  window.innerHeight - ttH - margin));
-
-    tt.style.left = left + 'px';
-    tt.style.top  = top  + 'px';
-    tt.classList.toggle('flipped', flipped);
-
-    const arrowLeft    = (rect.left + rect.width / 2) - left;
-    const clampedArrow = Math.max(16, Math.min(arrowLeft, ttW - 16));
-    tt.style.setProperty('--arrow-left', clampedArrow + 'px');
-}
-
-function hideRoomTooltip() {
-    document.getElementById('roomFloatTooltip').classList.remove('visible');
-}
-
-function updateSelectedHint() {
-    const hint    = document.getElementById('cSelectedHint');
-    const cancelBtn = document.getElementById('cCancelSelBtn');
-    if (!hint) return;
-    if (selectedRoomType && isConstruction) {
-        const v = ROOMS_DB[selectedRoomType];
-        hint.innerHTML = `<span class="hint-mode-icon">🔨</span><span>${v.icon} <strong style="color:#fff">${v.name}</strong> &nbsp;·&nbsp; Удерживать ЛКМ: создать разметку &nbsp;·&nbsp; ПКМ: удалить &nbsp;·&nbsp; ПКМ на пустом — снять выбор &nbsp;</span>`;
-        hint.classList.add('visible');
-        if (cancelBtn) cancelBtn.classList.add('visible');
-        // Set hammer cursor on grid
-        const svg = document.getElementById('constructionGridSvg');
-        if (svg) svg.classList.add('placement-mode');
-    } else {
-        hint.classList.remove('visible');
-        hint.innerHTML = '';
-        if (cancelBtn) cancelBtn.classList.remove('visible');
-        // Remove hammer cursor
-        const svg = document.getElementById('constructionGridSvg');
-        if (svg) svg.classList.remove('placement-mode', 'erasing');
-    }
-}
-
-function selectRoomType(type) {
-    hideRoomTooltip();
-    // Clicking the already-selected type deselects it
-    if (selectedRoomType === type) {
-        cancelRoomSelection();
-        return;
-    }
-    selectedRoomType = type;
-    refreshRoomList();
-    updateSelectedHint();
-    updateConstructionPanels();   // <-- newly added
-    drawCGrid();
-}
-
-function cancelRoomSelection() {
-    hideRoomTooltip();
-    selectedRoomType = null;
-    refreshRoomList();
-    updateSelectedHint();
-    updateConstructionPanels();
-    drawCGrid();
-}
-
-// Fix 2: RMB anywhere outside the grid also deselects selected room
-document.addEventListener('mousedown', e => {
-    if (!isConstruction || e.button !== 2) return;
-    const svg = document.getElementById('constructionGridSvg');
-    if (svg && svg.contains(e.target)) return; // handled by onCellDown
-    if (selectedRoomType) {
-        cancelRoomSelection();
-    }
+sliderEl.addEventListener('pointerdown', e => {
+  if (sliderEl.classList.contains('disabled') || !currentOpenAbility) return;
+  sliderDrag = true;
+  sliderEl.setPointerCapture(e.pointerId);
+  const ratio = sliderRatio(e);
+  const h = document.getElementById('tf-slider-handle');
+  const f = sliderEl.querySelector('.tf-slider-fill');
+  if (h) h.style.left = (ratio*100)+'%';
+  if (f) f.style.width = (ratio*100)+'%';
+  e.preventDefault();
+});
+sliderEl.addEventListener('pointermove', e => {
+  if (!sliderDrag) return;
+  const ratio = sliderRatio(e);
+  const h = document.getElementById('tf-slider-handle');
+  const f = sliderEl.querySelector('.tf-slider-fill');
+  if (h) h.style.left = (ratio*100)+'%';
+  if (f) f.style.width = (ratio*100)+'%';
+});
+sliderEl.addEventListener('pointerup', e => {
+  if (!sliderDrag) return;
+  sliderDrag = false;
+  const ability = getAbility(currentOpenAbility);
+  const prog = gameState.abilitiesProgress[currentOpenAbility];
+  const maxAllowed = prog ? prog.currentLevel : 0;
+  const ratio = sliderRatio(e);
+  let idx = Math.round(ratio * ability.maxLevel);
+  if (idx > maxAllowed) {
+    addNotification(`❌ Уровень ${idx} еще не открыт! Ползунок возвращен.`, 'error');
+    idx = maxAllowed;
+  }
+  changeAbilityLevel(currentOpenAbility, idx);
 });
 
-function refreshRoomList() {
-    buildRoomListPanel();
+function toggleVisibility(elementId, condition) {
+  const el = document.getElementById(elementId);
+  if (condition) el.classList.remove('hidden');
+  else el.classList.add('hidden');
 }
 
-// ════════════════════════════════════════════════════════
-//  TOP / SUB TAB EVENTS
-// ════════════════════════════════════════════════════════
-document.querySelectorAll('.main-tab').forEach(t => {
-    t.addEventListener('click', function() {
-        document.querySelectorAll('.main-tab').forEach(x=>x.classList.remove('active'));
-        this.classList.add('active');
-    });
-});
-document.querySelectorAll('.layer-btn').forEach(b => {
-    b.addEventListener('click', function() {
-        document.querySelectorAll('.layer-btn').forEach(x=>x.classList.remove('active'));
-        this.classList.add('active');
-    });
-});
+function openAbilityPanel(abilityId) {
+  currentOpenAbility = abilityId;
+  const ability = getAbility(abilityId);
+  const panel = document.getElementById('ability-panel');
+  panel.classList.add('open');
+  panel.classList.remove('core-panel', 'cross-panel');
+  if (ability.isCrossAbility) {
+    panel.classList.add('cross-panel');
+    panel.style.borderColor = '';
+  } else {
+    panel.style.borderColor = AI_COLORS[ability.aiType] || 'var(--neon-blue)';
+    if (ability.isMain) panel.classList.add('core-panel');
+  }
+  
+  const isUnlocked = gameState.unlockedAbilities[abilityId];
+  const currentLevel = gameState.teraflops.allocation[abilityId] || 0;
+  const prog = gameState.abilitiesProgress[abilityId] || { currentLevel: 1, progress: 0, isFrozen: false };
+  const foreign = isForeignToPlayer(ability);
+  const discount = hasDiscount(ability);
 
-document.getElementById('levelUp').onclick   = () => { if (currentFloor<3) switchFloor(currentFloor+1); };
-document.getElementById('levelDown').onclick = () => { if (currentFloor>1) switchFloor(currentFloor-1); };
-document.getElementById('cLevelUp').onclick  = () => { if (currentFloor<3) switchFloor(currentFloor+1); };
-document.getElementById('cLevelDown').onclick= () => { if (currentFloor>1) switchFloor(currentFloor-1); };
+  document.getElementById('panel-name').textContent = ability.name;
+  let badgesHtml = '';
+  if (ability.isMain) badgesHtml += `<span class="badge badge-core"> ЯДРО</span>`;
+  if (ability.isCrossAbility) badgesHtml += `<span class="badge badge-cross">🔀 ПЕРЕКРЁСТНАЯ</span>`;
+  if (ability.aiTypes) { ability.aiTypes.forEach(t => { badgesHtml += `<span class="badge badge-${t}">${AI_NAMES[t]}</span>`; }); }
+  else { badgesHtml += `<span class="badge badge-${ability.aiType}">${AI_NAMES[ability.aiType]}</span>`; }
+  badgesHtml += `<span class="badge ${ability.type === 'active' ? 'badge-active' : 'badge-passive'}">${ability.type === 'active' ? 'АКТИВНАЯ' : 'ПАССИВНАЯ'}</span>`;
+  if (foreign) badgesHtml += `<span class="badge badge-foreign">ЧУЖЕРОДНАЯ</span>`;
+  if (!isUnlocked) badgesHtml += `<span class="badge badge-locked"> ЗАКРЫТА</span>`;
+  else if (currentLevel === 0) badgesHtml += `<span class="badge badge-inactive">⏸ НЕ АКТИВНА</span>`;
+  document.getElementById('panel-badges').innerHTML = badgesHtml;
+  
+  const reqBlock = document.getElementById('requirements-block');
+  const reqTitle = document.getElementById('req-title');
+  const reqList = document.getElementById('requirements-list');
+  
+  if (!isUnlocked) {
+    const reqs = getUnlockRequirements(abilityId);
+    toggleVisibility('requirements-block', true);
+    if (reqs.allMet) { reqBlock.classList.add('all-met'); reqTitle.textContent = '✅ Все требования выполнены'; }
+    else { reqBlock.classList.remove('all-met'); reqTitle.textContent = '🔒 Требования не выполнены'; }
+    reqList.innerHTML = reqs.items.map(r => `<div class="req-item ${r.met?'met':'unmet'}">${r.met?'✅':'❌'} ${r.text}</div>`).join('');
+  } else {
+    toggleVisibility('requirements-block', false);
+  }
+  
+  toggleVisibility('inactive-warning', isUnlocked && currentLevel === 0);
+  toggleVisibility('destab-warning', foreign && !isUnlocked && !ability.isCrossAbility);
+  toggleVisibility('cross-note', ability.isCrossAbility);
 
-document.getElementById('isoGrid').addEventListener('click', e => {
-    if (!isConstruction && (e.target===e.currentTarget || e.target.id==='roomsContainer' || e.target.id==='allRoomsOverlay'))
-        closePanel();
-});
+  const isMaxed = prog.currentLevel >= ability.maxLevel;
+  document.getElementById('panel-current-level').textContent = currentLevel === 0 ? 'НЕ АКТИВНА (ур. 0)' : (isMaxed ? 'МАКСИМАЛЬНЫЙ УРОВЕНЬ' : `Уровень ${prog.currentLevel} из ${ability.maxLevel}`);
+  document.getElementById('panel-progress-percent').textContent = currentLevel === 0 ? '—' : (isMaxed ? '100%' : `${Math.floor(prog.progress)}%`);
+  const progressBar = document.getElementById('panel-progress-bar');
+  progressBar.style.width = currentLevel === 0 ? '0%' : (isMaxed ? '100%' : `${prog.progress}%`);
+  const levelHint = document.getElementById('panel-level-hint');
+  const underAllocated = currentLevel > 0 && currentLevel < prog.currentLevel;
+  if (!isMaxed && underAllocated) { progressBar.classList.add('frozen'); levelHint.classList.add('visible'); }
+  else { progressBar.classList.remove('frozen'); levelHint.classList.remove('visible'); }
 
-// ════════════════════════════════════════════════════════
-//  TIME CONTROLS
-// ════════════════════════════════════════════════════════
-function updateTime() {
-    if (isPaused) return;
-    currentTime.minutes++;
-    if (currentTime.minutes>=60) { currentTime.minutes=0; currentTime.hours=(currentTime.hours+1)%24; }
-    document.getElementById('timeDisplay').textContent =
-        String(currentTime.hours).padStart(2,'0')+':'+String(currentTime.minutes).padStart(2,'0');
+  toggleVisibility('btn-accelerate', isUnlocked && currentLevel > 0 && !underAllocated && !isMaxed);
+
+  toggleVisibility('resources-block', isUnlocked);
+  renderTfSlider(ability, isUnlocked, currentLevel, prog, discount);
+  document.getElementById('discount-note').style.display = discount ? 'block' : 'none';
+
+  document.getElementById('panel-effect-desc').textContent = ability.description;
+  let statsHtml = '';
+  if (ability.effects) {
+    const displayLevel = isUnlocked ? prog.currentLevel : 1;
+    for (let key in ability.effects) {
+      const eff = ability.effects[key];
+      const cur = calculateEffect(eff, displayLevel);
+      const isMax = displayLevel >= ability.maxLevel;
+      const next = isMax ? null : calculateEffect(eff, displayLevel + 1);
+      let vc = ''; if (eff.negative || cur < 0) vc = 'negative'; else if (eff.unit === '%') vc = 'percent';
+      statsHtml += `<div class="effect-row"><div class="effect-header"><span class="effect-label">${eff.icon} ${eff.label}</span><span class="effect-current ${vc}">${cur}${eff.unit}</span></div><div class="effect-formula"><span>База: ${eff.base}${eff.unit} + ${eff.perLevel}${eff.unit}/ур.</span>${isMax?`<span class="effect-maxed">✓ MAX</span>`:`<span class="effect-next">→ Lv.${displayLevel+1}: ${next}${eff.unit}</span>`}</div></div>`;
+    }
+  }
+  document.getElementById('panel-stat-changes').innerHTML = statsHtml;
+  
+  toggleVisibility('panel-cooldown-box', ability.type === 'active' && isUnlocked && currentLevel > 0);
+  if (ability.type === 'active' && isUnlocked && currentLevel > 0) {
+    const onCd = gameState.cooldowns[abilityId] && Date.now() < gameState.cooldowns[abilityId];
+    document.getElementById('panel-cooldown-timer').textContent = onCd ? `${((gameState.cooldowns[abilityId]-Date.now())/1000).toFixed(1)}с` : 'Готово';
+    document.getElementById('panel-frozen-badge').classList.toggle('visible', prog.isFrozen);
+  }
+  
+  toggleVisibility('panel-use-btn', ability.type === 'active' && isUnlocked && currentLevel > 0);
+  if (ability.type === 'active' && isUnlocked && currentLevel > 0) {
+    const onCd = gameState.cooldowns[abilityId] && Date.now() < gameState.cooldowns[abilityId];
+    const useBtn = document.getElementById('panel-use-btn');
+    useBtn.disabled = onCd;
+    useBtn.textContent = onCd ? '⏳ Перезарядка...' : '🔹 Активировать';
+  }
+  
+  toggleVisibility('panel-unlock-btn', !isUnlocked);
+  if (!isUnlocked) {
+    const reqs = getUnlockRequirements(abilityId);
+    const unlockBtn = document.getElementById('panel-unlock-btn');
+    unlockBtn.disabled = !reqs.allMet;
+    unlockBtn.textContent = reqs.allMet ? '🔓 Изучить (1 очко)' : '🔒 Требования не выполнены';
+    unlockBtn.onclick = () => unlockCurrentAbility();
+  }
 }
-document.getElementById('pauseBtn').onclick = function() {
-    isPaused=true; clearInterval(timeInterval);
-    document.querySelectorAll('.playback-btn').forEach(b=>b.classList.remove('active'));
-    this.classList.add('active');
-};
-document.getElementById('playBtn').onclick = function() {
-    isPaused=false; clearInterval(timeInterval); timeInterval=setInterval(updateTime,1000);
-    document.querySelectorAll('.playback-btn').forEach(b=>b.classList.remove('active'));
-    this.classList.add('active');
-};
-document.getElementById('fastBtn').onclick = function() {
-    isPaused=false; clearInterval(timeInterval); timeInterval=setInterval(updateTime,200);
-    document.querySelectorAll('.playback-btn').forEach(b=>b.classList.remove('active'));
-    this.classList.add('active');
-};
 
-// ── INIT ──
-renderFloor(1);
+function closeAbilityPanel() { 
+  const panel = document.getElementById('ability-panel');
+  panel.classList.remove('open');
+  currentOpenAbility = null; 
+  draw();
+}
+function addNotification(t, type="info") { const c = document.getElementById('notifications'); const n = document.createElement('div'); n.className = `notification ${type}`; n.textContent = t; c.appendChild(n); setTimeout(() => n.remove(), 4000); }
+function addPoints() { gameState.learningPoints += 10; updateUI(); addNotification('+10 очков', 'success'); }
+function resetGame() { location.reload(); }
+
+const canvas = document.getElementById('tree-canvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('canvas-container');
+
+function resizeCanvas() { canvas.width = container.clientWidth; canvas.height = container.clientHeight; panX = canvas.width / 2; panY = canvas.height / 2 + 60; draw(); }
+window.addEventListener('resize', resizeCanvas);
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save(); ctx.translate(panX, panY); ctx.scale(zoom, zoom);
+
+  const allAbilities = [];
+  for (let type in ABILITIES_DATA) { for (let key in ABILITIES_DATA[type]) { allAbilities.push(ABILITIES_DATA[type][key]); } }
+
+  ctx.save();
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  for (const ability of allAbilities) {
+    if (!ability.isMain) continue;
+    ctx.strokeStyle = hexToRgba(AI_COLORS[ability.aiType] || '#ffd700', 0.35);
+    ctx.beginPath();
+    ctx.moveTo(ability.x, ability.y - 60);
+    ctx.lineTo(ability.x, -100000);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  for (const ability of allAbilities) {
+    const branchColor = AI_COLORS[ability.aiType] || '#4488ff';
+    if (ability.parent) {
+      const parent = getAbility(ability.parent);
+      if (parent) {
+        if (ability.isCrossAbility) { ctx.strokeStyle = 'rgba(255,68,68,0.5)'; }
+        else { ctx.strokeStyle = hexToRgba(branchColor, 0.35); }
+        ctx.lineWidth = ability.isCrossAbility ? 2.5 : 2;
+        ctx.setLineDash(ability.isCrossAbility ? [6,4] : []);
+        ctx.beginPath(); ctx.moveTo(parent.x, parent.y); ctx.lineTo(ability.x, ability.y); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+    if (ability.crossParent) {
+      const cp = getAbility(ability.crossParent);
+      if (cp) { ctx.strokeStyle = 'rgba(255,68,255,0.5)'; ctx.lineWidth = 2.5; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.moveTo(cp.x, cp.y); ctx.lineTo(ability.x, ability.y); ctx.stroke(); ctx.setLineDash([]); }
+    }
+  }
+
+  for (const ability of allAbilities) {
+    const isUnlocked = gameState.unlockedAbilities[ability.id];
+    const isCore = ability.isMain;
+    const isCross = ability.isCrossAbility;
+    const canUnlock = canUnlockAbility(ability.id);
+    const allocLevel = gameState.teraflops.allocation[ability.id] || 0;
+    const learnedLevel = gameState.abilitiesProgress[ability.id]?.currentLevel || 0;
+    const branchColor = AI_COLORS[ability.aiType] || '#888888';
+    const width = isCore ? 200 : (isCross ? 180 : 160);
+    const height = isCore ? 120 : (isCross ? 100 : 90);
+    const x = ability.x - width/2, y = ability.y - height/2;
+
+    let strokeColor, strokeWidth;
+    if (isCross) { strokeColor = '#ff44ff'; strokeWidth = 3; }
+    else if (!isUnlocked && !canUnlock) { strokeColor = '#444444'; strokeWidth = 1; }
+    else if (isUnlocked) { strokeColor = branchColor; strokeWidth = (isCore || allocLevel > 0) ? 3 : 2; }
+    else { strokeColor = branchColor; strokeWidth = 2; }
+
+    if (isCore) {
+      const g = ctx.createLinearGradient(x,y,x+width,y+height);
+      g.addColorStop(0, hexToRgba(branchColor, 0.28));
+      g.addColorStop(1, hexToRgba(branchColor, 0.10));
+      ctx.fillStyle = g;
+    }
+    else if (isCross) { const g = ctx.createLinearGradient(x,y,x+width,y+height); g.addColorStop(0,'rgba(50,10,30,0.95)'); g.addColorStop(1,'rgba(30,5,40,0.95)'); ctx.fillStyle = g; }
+    else if (!isUnlocked && !canUnlock) ctx.fillStyle = 'rgba(20,20,30,0.7)';
+    else ctx.fillStyle = 'rgba(15,15,35,0.9)';
+
+    ctx.strokeStyle = strokeColor; ctx.lineWidth = strokeWidth;
+    ctx.beginPath(); ctx.roundRect(x, y, width, height, 10); ctx.fill(); ctx.stroke();
+
+    if (isCross) { ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x+3, y+3, width-6, height-6, 8); ctx.stroke(); }
+
+    if (ability.id === currentOpenAbility) {
+      ctx.save();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = 'rgba(255,255,255,0.9)';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.roundRect(x - 6, y - 6, width + 12, height + 12, 12);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (!isUnlocked && !canUnlock) { ctx.fillStyle = 'rgba(100,100,100,0.8)'; ctx.font = 'bold 24px "Segoe UI"'; ctx.textAlign = 'center'; ctx.fillText('🔒', ability.x, y + height - 12); }
+
+    if (isCore) {
+      const bw=90,bh=20,bx=ability.x-bw/2,by=y-bh/2-2;
+      ctx.fillStyle = branchColor;
+      ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,4); ctx.fill();
+      ctx.fillStyle = AI_BADGE_TEXT[ability.aiType] || '#000';
+      ctx.font='bold 11px "Segoe UI"'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(' ЯДРО',ability.x,by+bh/2);
+      ctx.textBaseline='alphabetic';
+    }
+    if (isCross) {
+      const bw=120,bh=18,bx=ability.x-bw/2,by=y-bh/2-2;
+      const g2=ctx.createLinearGradient(bx,by,bx+bw,by);
+      g2.addColorStop(0,'#ff4444'); g2.addColorStop(1,'#ffdd44');
+      ctx.fillStyle=g2;
+      ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,4); ctx.fill();
+      ctx.save();
+      ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=3;
+      ctx.fillStyle='#fff'; ctx.font='bold 10px "Segoe UI"'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('🔀 ПЕРЕКРЁСТНАЯ',ability.x,by+bh/2);
+      ctx.restore();
+      ctx.textBaseline='alphabetic';
+    }
+
+    ctx.fillStyle = (!isUnlocked&&!canUnlock) ? '#555' : (isCore ? branchColor : (isCross ? '#ff88ff' : '#fff'));
+    ctx.font = isCore ? 'bold 15px "Segoe UI"' : 'bold 13px "Segoe UI"';
+    ctx.textAlign = 'center';
+    ctx.fillText(ability.name, ability.x, y + (isCore?40:(isCross?35:25)));
+    
+    ctx.font = '12px "Courier New"';
+    if (isUnlocked && allocLevel === 0) {
+      ctx.fillStyle = '#ffdd44';
+      ctx.fillText(`⏸ НЕ АКТИВНА | ⚡0 TF`, ability.x, y + (isCore?60:(isCross?55:45)));
+    } else {
+      ctx.fillStyle = isCore ? hexToRgba(branchColor, 0.8) : '#aaa';
+      ctx.fillText(`Lv.${learnedLevel} | ⚡${getAbilityCost(ability, allocLevel)} TF`, ability.x, y + (isCore?60:(isCross?55:45)));
+    }
+
+    if (allocLevel > 0 && gameState.abilitiesProgress[ability.id]) {
+      const prog = gameState.abilitiesProgress[ability.id];
+      const barW = width-30, barH = 8, barX = ability.x-barW/2, barY = y+(isCore?75:(isCross?70:60));
+      ctx.fillStyle = '#333'; ctx.fillRect(barX, barY, barW, barH);
+      ctx.fillStyle = strokeColor;
+      ctx.fillRect(barX, barY, barW*(prog.progress/100), barH);
+    }
+    ability._bounds = { x, y, width, height };
+  }
+  ctx.restore();
+}
+
+canvas.addEventListener('mousedown', e => { 
+  stopPanAnim();
+  const r=canvas.getBoundingClientRect(); const mx=(e.clientX-r.left-panX)/zoom, my=(e.clientY-r.top-panY)/zoom; 
+  let cl=null; 
+  for(let t in ABILITIES_DATA){for(let k in ABILITIES_DATA[t]){const b=ABILITIES_DATA[t][k]._bounds; if(b&&mx>=b.x&&mx<=b.x+b.width&&my>=b.y&&my<=b.y+b.height) cl=ABILITIES_DATA[t][k];}} 
+  if(cl) { openAbilityPanel(cl.id); focusOnAbility(cl); }
+  else { isDragging=true; lastMouseX=e.clientX; lastMouseY=e.clientY; } 
+});
+canvas.addEventListener('mousemove', e => { if(isDragging){panX+=e.clientX-lastMouseX;panY+=e.clientY-lastMouseY;lastMouseX=e.clientX;lastMouseY=e.clientY;draw();} });
+canvas.addEventListener('mouseup', () => isDragging=false);
+canvas.addEventListener('wheel', e => { e.preventDefault(); stopPanAnim(); zoom=Math.max(0.5,Math.min(2,zoom*(e.deltaY<0?1.1:0.9))); draw(); });
+
+resizeCanvas();
 </script>
 </body>
-
-
 </html>
