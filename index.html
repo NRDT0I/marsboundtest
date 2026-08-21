@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Древо ИИ v7.3: Плавные анимации</title>
+<title>Древо ИИ v9.5</title>
 <style>
   :root {
     --bg-color: #0a0a1a;
-    --panel-bg: rgba(15, 15, 35, 0.95);
+    --panel-bg: rgba(20, 20, 35, 0.97);
     --neon-blue: #4488ff;
     --neon-green: #44ff88;
     --neon-red: #ff4444;
@@ -21,22 +21,11 @@
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
   body { background-color: var(--bg-color); color: var(--text-main); font-family: 'Segoe UI', sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
 
-  #header {
-    position: absolute; top: 0; left: 0; right: 0; height: 70px;
-    background: rgba(10, 10, 26, 0.97); border-bottom: 1px solid var(--border-color);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 20px; z-index: 10; font-size: 15px;
-  }
+  #header { position: absolute; top: 0; left: 0; right: 0; height: 70px; background: rgba(10,10,26,0.97); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 10; font-size: 15px; }
   .hdr-title { font-weight: bold; font-size: 18px; }
   .stat-box { display: flex; align-items: center; gap: 8px; }
   .stat-value { font-family: 'Courier New', monospace; font-weight: bold; color: var(--neon-blue); }
-
-  #header-resources {
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    text-align: center; background: rgba(255,255,255,0.03);
-    border: 1px solid var(--border-color); border-radius: 8px;
-    padding: 6px 18px; min-width: 240px;
-  }
+  #header-resources { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); text-align: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 18px; min-width: 240px; }
   .hud-row { display: flex; justify-content: center; align-items: center; gap: 6px; font-size: 13px; }
   .hud-row .stat-value { font-size: 15px; }
   .hud-row.tf .stat-value { color: var(--neon-yellow); }
@@ -46,189 +35,109 @@
   #hud-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-blue)); transition: width 0.3s; }
   .hud-bar-segments { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(0,0,0,0.55) calc(10% - 1px) 10%); }
 
-  #canvas-container { position: absolute; top: 70px; left: 0; bottom: 0; right: 0; cursor: grab; }
-  #canvas-container:active { cursor: grabbing; }
+  #canvas-container { position: absolute; top: 70px; left: 0; bottom: 0; right: 0; }
   canvas { display: block; }
 
   #ability-panel {
-    position: absolute;
-    top: 85px;
-    bottom: 20px;
-    right: 20px;
-    width: 390px;
-    background: var(--panel-bg);
-    border: 1px solid var(--neon-blue);
-    border-radius: 8px;
-    z-index: 20;
-    display: none;
-    flex-direction: column;
-    box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 15px rgba(68, 136, 255, 0.1);
-    backdrop-filter: blur(10px);
-    overflow: hidden;
+    position: absolute; top: 85px; bottom: 20px; right: 20px; width: 520px;
+    background: var(--panel-bg); border: 1px solid var(--neon-blue); border-radius: 12px;
+    z-index: 20; display: none; flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,0.9); backdrop-filter: blur(15px); overflow: hidden;
   }
   #ability-panel.open { display: flex; }
-  #ability-panel.core-panel { border-color: var(--gold); box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 25px rgba(255, 215, 0, 0.3); }
-  #ability-panel.cross-panel { border-image: linear-gradient(135deg, var(--neon-red), var(--neon-yellow)) 1; box-shadow: 0 0 30px rgba(0,0,0,0.8), 0 0 20px rgba(255, 68, 255, 0.2); }
-  
-  .panel-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start; flex-shrink: 0; }
-  .panel-title { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 5px; }
-  .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
-  .badge-passive { background: rgba(68, 255, 136, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green); }
-  .badge-active { background: rgba(255, 68, 255, 0.2); color: var(--neon-purple); border: 1px solid var(--neon-purple); }
-  .badge-amoral { background: rgba(255, 68, 68, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
-  .badge-chaotic { background: rgba(255, 221, 68, 0.2); color: var(--neon-yellow); border: 1px solid var(--neon-yellow); }
-  .badge-foreign { background: rgba(255, 68, 68, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red); }
-  .badge-core { background: linear-gradient(135deg, var(--gold), #b8860b); color: #000; border: 1px solid var(--gold); }
-  .badge-locked { background: rgba(100, 100, 100, 0.3); color: #888; border: 1px solid #555; }
-  .badge-cross { background: linear-gradient(135deg, rgba(255,68,68,0.3), rgba(255,221,68,0.3)); color: #fff; border: 1px solid var(--neon-purple); }
-  .badge-inactive { background: rgba(255, 221, 68, 0.2); color: var(--neon-yellow); border: 1px solid var(--neon-yellow); }
+  #ability-panel.core-panel { border-color: var(--gold); }
+  #ability-panel.cross-panel { border-image: linear-gradient(135deg, var(--neon-red), var(--neon-yellow)) 1; }
 
-  .panel-scroll {
-    flex: 1;
-    overflow-y: auto;
-    padding: 15px 20px;
-    min-height: 0;
-  }
+  .panel-header { padding: 18px 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: flex-start; gap: 14px; flex-shrink: 0; }
+  .panel-icon { width: 64px; height: 64px; background: linear-gradient(135deg, #2a2a4a, #1a1a3a); border: 2px solid rgba(255,255,255,0.15); border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+  .panel-title-block { flex: 1; min-width: 0; }
+  .panel-title { font-size: 22px; font-weight: bold; color: #fff; line-height: 1.2; margin-bottom: 6px; }
+  .panel-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { font-size: 11px; padding: 4px 10px; border-radius: 6px; font-weight: bold; text-transform: uppercase; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #ccc; cursor: help; }
+  .badge-passive { background: rgba(68,255,136,0.15); color: var(--neon-green); border-color: var(--neon-green); }
+  .badge-active { background: rgba(255,68,255,0.15); color: var(--neon-purple); border-color: var(--neon-purple); }
+  .badge-amoral { background: rgba(255,68,68,0.15); color: var(--neon-red); border-color: var(--neon-red); }
+  .badge-chaotic { background: rgba(255,221,68,0.15); color: var(--neon-yellow); border-color: var(--neon-yellow); }
+  .badge-foreign { background: rgba(255,68,68,0.15); color: var(--neon-red); border-color: var(--neon-red); }
+  .badge-core { background: linear-gradient(135deg, var(--gold), #b8860b); color: #000; border-color: var(--gold); }
+  .badge-locked { background: rgba(100,100,100,0.3); color: #888; border-color: #555; }
+  .badge-cross { background: linear-gradient(135deg, rgba(255,68,68,0.3), rgba(255,221,68,0.3)); color: #fff; border-color: var(--neon-purple); }
+  .badge-inactive { background: rgba(255,221,68,0.15); color: var(--neon-yellow); border-color: var(--neon-yellow); }
+
+  .close-panel { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 24px; line-height: 1; padding: 4px 8px; }
+  .close-panel:hover { color: #fff; }
+
+  .panel-scroll { flex: 1; overflow-y: auto; padding: 16px 20px; min-height: 0; scroll-snap-type: y mandatory; }
   .panel-scroll::-webkit-scrollbar { width: 6px; }
-  .panel-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
   .panel-scroll::-webkit-scrollbar-thumb { background: rgba(68,136,255,0.4); border-radius: 3px; }
-  .panel-scroll::-webkit-scrollbar-thumb:hover { background: rgba(68,136,255,0.7); }
+  .snap-section { scroll-snap-align: start; }
 
-  .panel-footer {
-    padding: 12px 20px 18px;
-    border-top: 1px solid var(--border-color);
-    background: rgba(10, 10, 26, 0.6);
-    flex-shrink: 0;
-    max-height: 55vh;
-    overflow-y: auto;
-  }
-  .panel-footer::-webkit-scrollbar { width: 6px; }
-  .panel-footer::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-  .panel-footer::-webkit-scrollbar-thumb { background: rgba(68,136,255,0.4); border-radius: 3px; }
+  .effect-desc { font-size: 14px; line-height: 1.5; color: #aaa; margin-bottom: 18px; font-style: italic; }
 
-  /* НОВОЕ: плавные анимации для блоков */
-  .block { margin-bottom: 14px; transition: opacity 0.3s, max-height 0.3s; }
-  .block.hidden { opacity: 0; max-height: 0; overflow: hidden; margin: 0; }
-  .block-title { font-size: 12px; text-transform: uppercase; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 3px; }
+  .level-accel-row { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+  .level-col { flex: 1; min-width: 0; }
+  .level-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .level-label { font-size: 18px; color: #fff; font-weight: 500; }
+  .level-value { font-size: 18px; color: var(--text-dim); font-family: 'Courier New', monospace; }
+  .progress-container { background: #111; height: 8px; border-radius: 4px; overflow: hidden; cursor: help; }
+  .progress-bar { height: 100%; background: #fff; width: 0%; transition: width 0.5s ease-out; }
+  .progress-bar.frozen { background: #555; }
 
-  .requirements-box { 
-    background: rgba(255, 68, 68, 0.08); 
-    border: 1px solid rgba(255, 68, 68, 0.4); 
-    border-radius: 6px; 
-    padding: 10px 12px; 
-    margin-bottom: 10px;
-    transition: opacity 0.3s, max-height 0.3s;
-  }
-  .requirements-box.hidden { opacity: 0; max-height: 0; padding: 0; overflow: hidden; margin: 0; border: none; }
-  .requirements-box .req-title { color: var(--neon-red); font-weight: bold; font-size: 12px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
-  .requirements-box.all-met { background: rgba(68, 255, 136, 0.08); border-color: rgba(68, 255, 136, 0.4); }
-  .requirements-box.all-met .req-title { color: var(--neon-green); }
-  .req-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #ccc; margin-bottom: 3px; }
+  .btn-accelerate-big { flex: 0 0 34%; padding: 10px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.3); color: #ddd; border-radius: 50px; cursor: pointer; font-size: 13px; font-weight: 500; line-height: 1.3; transition: all 0.2s; }
+  .btn-accelerate-big:hover:not(:disabled) { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.6); color: #fff; }
+  .btn-accelerate-big:disabled { opacity: 0.4; cursor: not-allowed; border-color: rgba(100,100,100,0.3); color: #666; }
+
+  .levels-scale { position: relative; }
+  .levels-track { position: absolute; left: 80px; top: 70px; bottom: 70px; width: 8px; background: #111; border-radius: 4px; }
+  .levels-track-fill { position: absolute; left: 0; bottom: 0; width: 100%; background: #fff; border-radius: 4px; transition: height 0.3s; }
+  .level-row { position: relative; display: flex; align-items: center; min-height: 140px; margin-bottom: 12px; }
+  .level-row:last-child { margin-bottom: 0; }
+  .level-cost-label { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 55px; text-align: right; font-size: 16px; color: var(--neon-yellow); font-family: 'Courier New', monospace; font-weight: bold; cursor: help; }
+  .level-cost-label:hover { color: #fff; }
+  .level-cost-label .bolt { display: inline-block; vertical-align: -2px; margin-right: 2px; }
+  .level-cost-label.needfree { color: var(--neon-red); }
+  .level-indicator { position: absolute; left: 70px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: #333; border: 4px solid #555; z-index: 2; display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; transition: all 0.3s; }
+  .level-indicator:hover { transform: translateY(-50%) scale(1.1); }
+  .level-indicator.current { background: #fff; border-color: #999; box-shadow: 0 0 10px rgba(255,255,255,0.6); }
+  .level-indicator.locked { background: #222; border-color: #444; }
+  .level-indicator.off { background: #e08888; border-color: #e08888; }
+  .level-card { margin-left: 115px; flex: 1; border-radius: 8px; padding: 14px 18px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); }
+  .level-card:hover:not(.locked-card) { filter: brightness(1.15); }
+  .level-card.active-card { background: transparent; }
+  .level-card.active-card .lc-title { color: #fff; }
+  .level-card.active-card .lc-effect-name { color: #ddd; }
+  .level-card.normal-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); }
+  .level-card.normal-card .lc-title { color: #eee; }
+  .level-card.normal-card .lc-effect-name { color: #bbb; }
+  .level-card.locked-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); opacity: 0.55; cursor: not-allowed; }
+  .level-card.locked-card .lc-title, .level-card.locked-card .lc-effect-name, .level-card.locked-card .lc-effect-value { color: #666; }
+  .level-card.off-card { background: rgba(255,68,68,0.10); border: 1px solid rgba(255,68,68,0.35); }
+  .level-card.off-card .lc-off-desc { color: #ff9c9c; }
+  .lc-left { display: flex; align-items: center; min-width: 70px; border-right: 1px solid rgba(255,255,255,0.15); padding-right: 16px; align-self: stretch; }
+  .lc-title { font-size: 28px; font-weight: bold; color: #fff; font-family: 'Courier New', monospace; }
+  .lc-right { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .lc-effect { display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+  .lc-effect-name { color: #ccc; }
+  .lc-effect-value { color: var(--neon-green); font-family: 'Courier New', monospace; font-weight: bold; font-size: 16px; }
+  .lc-effect-value.negative { color: var(--neon-red); }
+  .lc-effect-value.percent { color: var(--neon-yellow); }
+  .lc-off-desc { font-size: 14px; }
+
+  .requirements-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px 16px; margin-top: 16px; }
+  .req-title { color: #fff; font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+  .req-list { list-style: disc; padding-left: 20px; }
+  .req-item { font-size: 14px; color: #aaa; margin-bottom: 6px; }
   .req-item.met { color: var(--neon-green); }
   .req-item.unmet { color: var(--neon-red); }
 
-  .progress-container { background: #1a1a3e; height: 10px; border-radius: 5px; overflow: hidden; margin: 6px 0; }
-  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)); width: 0%; transition: width 0.5s ease-out; }
-  .progress-bar.frozen { background: #555; }
-  .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); }
-  
-  .btn-accelerate { 
-    width: 100%; margin-top: 6px; padding: 6px; 
-    background: rgba(255, 221, 68, 0.2); border: 1px solid var(--neon-yellow); 
-    color: var(--neon-yellow); border-radius: 4px; cursor: pointer; font-size: 12px;
-    transition: opacity 0.3s, transform 0.3s;
-  }
-  .btn-accelerate:hover { background: rgba(255, 221, 68, 0.4); }
-  .btn-accelerate.hidden { opacity: 0; pointer-events: none; transform: translateY(-5px); }
+  .destab-warning { background: rgba(255,68,68,0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; text-align: center; }
 
-  .effect-desc { font-size: 13px; line-height: 1.5; color: #ccc; margin-bottom: 10px; }
-  .effect-row { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
-  .effect-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-  .effect-label { font-size: 13px; color: #ddd; font-weight: 500; }
-  .effect-current { font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; color: var(--neon-green); }
-  .effect-current.negative { color: var(--neon-red); }
-  .effect-current.percent { color: var(--neon-yellow); }
-  .effect-formula { font-size: 11px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; }
-  .effect-next { color: var(--neon-blue); font-weight: bold; font-size: 11px; }
-  .effect-maxed { color: var(--neon-green); font-weight: bold; font-size: 11px; }
-  
-  .cooldown-box { 
-    margin: 8px 0; padding: 8px; 
-    background: rgba(255,255,255,0.05); border-radius: 4px; 
-    display: flex; justify-content: space-between; align-items: center;
-    transition: opacity 0.3s, max-height 0.3s;
-  }
-  .cooldown-box.hidden { opacity: 0; max-height: 0; padding: 0; overflow: hidden; margin: 0; }
-  .frozen-badge { background: var(--neon-blue); color: #000; font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: bold; display: none; }
-  .frozen-badge.visible { display: inline-block; }
+  .btn-unlock { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple)); color: #fff; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 16px; transition: all 0.2s; box-shadow: 0 0 16px rgba(68,136,255,0.45); }
+  .btn-unlock:hover:not(:disabled) { filter: brightness(1.15); box-shadow: 0 0 22px rgba(68,136,255,0.6); }
+  .btn-unlock:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 
-  .rule-hint { font-size: 11px; color: var(--neon-red); margin-top: 5px; display: none; }
-  .rule-hint.visible { display: block; }
-
-  /* НОВОЕ: плавные предупреждения */
-  .inactive-warning, .destab-warning, .cross-note { 
-    padding: 8px; border-radius: 4px; font-size: 12px; margin-bottom: 12px; text-align: center;
-    transition: opacity 0.3s, max-height 0.3s;
-  }
-  .inactive-warning { background: rgba(255, 221, 68, 0.1); border: 1px solid var(--neon-yellow); color: var(--neon-yellow); }
-  .destab-warning { background:rgba(255,68,68,0.1); border:1px solid var(--neon-red); color:var(--neon-red); }
-  .cross-note { background:rgba(255,68,255,0.08); border:1px solid var(--neon-purple); color:var(--neon-purple); }
-  .inactive-warning.hidden, .destab-warning.hidden, .cross-note.hidden { 
-    opacity: 0; max-height: 0; padding: 0; overflow: hidden; margin: 0; border: none;
-  }
-
-  .tf-slider { position: relative; padding: 0 34px; margin: 10px 4px 4px; touch-action: none; cursor: pointer; }
-  .tf-slider.disabled { opacity: 0.45; pointer-events: none; }
-  .tf-area { position: relative; height: 84px; }
-  .tf-slider-track { position: absolute; left: 0; right: 0; top: 36px; height: 6px; background: #1a1a3e; border-radius: 3px; border: 1px solid rgba(255,255,255,0.08); }
-  .tf-slider-fill { position: absolute; left: 0; top: 36px; height: 6px; background: linear-gradient(90deg, var(--neon-green), var(--neon-blue)); border-radius: 3px; transition: width 0.3s; }
-  .tf-stop { position: absolute; top: 0; width: 68px; transform: translateX(-50%); text-align: center; }
-  .tf-stop-notch { position: absolute; left: 50%; top: 33px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #333; border: 2px solid #555; z-index: 1; transition: all 0.3s; }
-  .tf-stop.current .tf-stop-notch { background: var(--neon-green); border-color: var(--neon-green); box-shadow: 0 0 6px rgba(68,255,136,0.7); }
-  .tf-stop.locked .tf-stop-notch { background: #222; border-color: #3a3a3a; }
-  /* НОВОЕ: подсветка доступного уровня */
-  .tf-stop.available .tf-stop-notch { 
-    background: var(--gold); 
-    border-color: var(--gold); 
-    box-shadow: 0 0 10px rgba(255,215,0,0.8);
-    animation: pulse-gold 1.5s ease-in-out infinite;
-  }
-  @keyframes pulse-gold {
-    0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.8); transform: scale(1); }
-    50% { box-shadow: 0 0 20px rgba(255,215,0,1); transform: scale(1.2); }
-  }
-  .tf-stop-lvl { position: absolute; top: 8px; width: 100%; font-size: 12px; font-weight: bold; color: #ddd; }
-  .tf-stop-cost { position: absolute; top: 52px; width: 100%; font-size: 10px; color: var(--neon-yellow); font-family: 'Courier New', monospace; white-space: nowrap; }
-  .tf-stop-cost .old { text-decoration: line-through; opacity: 0.6; color: var(--text-dim); margin-right: 2px; }
-  .tf-stop.locked .tf-stop-lvl, .tf-stop.locked .tf-stop-cost { color: #555; }
-  .tf-slider-handle {
-    position: absolute; top: 30px; width: 18px; height: 18px; margin-left: -9px;
-    border-radius: 50%; background: #fff; border: 3px solid var(--neon-blue);
-    box-shadow: 0 0 10px rgba(68,136,255,0.8); cursor: grab; z-index: 2;
-    transition: left 0.3s ease-out;
-  }
-  .tf-slider-handle:active { cursor: grabbing; }
-
-  .btn-action { 
-    width: 100%; padding: 10px; 
-    background: var(--neon-purple); color: white; 
-    border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 4px; font-size: 14px;
-    transition: opacity 0.3s, transform 0.3s;
-  }
-  .btn-action:disabled { background: #333; color: #666; cursor: not-allowed; }
-  .btn-action.hidden { opacity: 0; pointer-events: none; transform: translateY(-5px); }
-  .btn-unlock { 
-    width: 100%; padding: 10px; 
-    background: var(--neon-blue); color: white; 
-    border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 0; font-size: 14px;
-    transition: opacity 0.3s, transform 0.3s;
-  }
-  .btn-unlock:disabled { background: #333; color: #666; cursor: not-allowed; }
-  .btn-unlock.hidden { opacity: 0; pointer-events: none; transform: translateY(-5px); }
-
-  .close-panel { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 20px; line-height: 1; }
-  .close-panel:hover { color: #fff; }
+  .custom-tooltip { position: fixed; background: rgba(10,10,26,0.95); border: 1px solid var(--neon-blue); border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #fff; z-index: 100; pointer-events: none; max-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; }
+  .custom-tooltip.visible { display: block; }
 
   #notifications { position: absolute; top: 80px; left: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 50; }
   .notification { background: var(--panel-bg); border-left: 4px solid var(--neon-blue); padding: 12px 16px; border-radius: 4px; min-width: 280px; font-size: 13px; animation: slideIn 0.3s ease-out; }
@@ -245,7 +154,7 @@
 <body>
 
   <div id="header">
-    <div class="hdr-title">🧠 Древо ИИ v7.3</div>
+    <div class="hdr-title">🧠 Древо ИИ v9.5</div>
     <div id="header-resources">
       <div class="hud-row tf">⚡ <span id="hud-tf-text" class="stat-value">100/100</span></div>
       <div class="hud-bar"><div id="hud-bar-fill"></div><div class="hud-bar-segments"></div></div>
@@ -258,61 +167,48 @@
 
   <div id="ability-panel">
     <div class="panel-header">
-      <div>
-        <div class="panel-title" id="panel-name">Название</div>
-        <div class="badges" id="panel-badges"></div>
+      <div class="panel-icon" id="panel-icon">🧠</div>
+      <div class="panel-title-block">
+        <div class="panel-title" id="panel-name">Название Способности</div>
+        <div class="panel-badges" id="panel-badges"></div>
       </div>
       <button class="close-panel" onclick="closeAbilityPanel()">✕</button>
     </div>
 
     <div class="panel-scroll">
-      <div id="inactive-warning" class="inactive-warning hidden">
-        ⚠️ Способность изучена, но не активна. Выделите Терафлопсы для активации.
-      </div>
-      <div id="destab-warning" class="destab-warning hidden">
-        ⚠️ ЧУЖЕРОДНАЯ ВЕТКА: Риск дестабилизации +15%
-      </div>
-      <div id="cross-note" class="cross-note hidden">
-        🔀 ПЕРЕКРЁСТНАЯ: Родная для обоих типов — без риска дестабилизации
+      <div class="snap-section">
+        <div id="destab-warning" class="destab-warning" style="display:none;">⚠️ ЧУЖЕРОДНАЯ ВЕТКА: Риск дестабилизации +15%</div>
+        <div class="effect-desc" id="panel-effect-desc"></div>
+        <div class="level-accel-row">
+          <div class="level-col">
+            <div class="level-header">
+              <div class="level-label">Уровень</div>
+              <div class="level-value" id="panel-level-value">0/4</div>
+            </div>
+            <div class="progress-container" id="progress-container"><div class="progress-bar" id="panel-progress-bar"></div></div>
+          </div>
+          <button class="btn-accelerate-big" id="btn-accelerate" onclick="accelerateProgress()">Ускорить изучение<br>(1 очко обучения)</button>
+        </div>
       </div>
 
-      <div class="block">
-        <div class="block-title">⚙️ Эффекты и Механика</div>
-        <div class="effect-desc" id="panel-effect-desc"></div>
-        <div id="panel-stat-changes"></div>
+      <div class="snap-section">
+        <div id="levels-scale-block" class="levels-scale" style="display:none;">
+          <div class="levels-track"><div class="levels-track-fill" id="levels-track-fill"></div></div>
+          <div id="levels-rows"></div>
+        </div>
+        <div id="requirements-block" class="requirements-box" style="display:none;">
+          <div class="req-title">Условия для изучения:</div>
+          <ul class="req-list" id="requirements-list"></ul>
+        </div>
       </div>
     </div>
 
-    <div class="panel-footer">
-      <div class="block" id="progress-block">
-        <div class="block-title">📈 Прогресс развития</div>
-        <div class="progress-text"><span id="panel-current-level">Уровень 1</span><span id="panel-progress-percent">0%</span></div>
-        <div class="progress-container"><div class="progress-bar" id="panel-progress-bar"></div></div>
-        <div class="rule-hint" id="panel-level-hint">⚠️ Прокачка остановлена: выделите максимальный доступный уровень!</div>
-        <button class="btn-accelerate hidden" id="btn-accelerate" onclick="accelerateProgress()">⚡ Ускорить (1 очко = 25% прогресса)</button>
-      </div>
-
-      <div id="resources-block" class="block hidden">
-        <div class="block-title" style="margin-bottom:4px;">⚡ Распределение Терафлопс</div>
-        <div style="font-size:11px; color:var(--text-dim); margin-bottom:2px;">ℹ️ Тяните ползунок к нужному пазу.  — уровень еще не прокачан.</div>
-        <div class="tf-slider" id="tf-slider"></div>
-        <div id="discount-note" style="display:none; font-size:11px; color:var(--neon-green); margin-top:2px; text-align:right;">✨ Применена скидка 50% (Специализация ИИ)</div>
-      </div>
-
-      <div class="cooldown-box hidden" id="panel-cooldown-box">
-        <span style="font-size:13px;">⏱️ Перезарядка: <span id="panel-cooldown-timer" style="color:var(--neon-yellow); font-weight:bold;">0.0с</span></span>
-        <span class="frozen-badge" id="panel-frozen-badge">❄️ ЗАМОРОЖЕНО</span>
-      </div>
-      <button id="panel-use-btn" class="btn-action hidden" onclick="useActiveAbility()">🔹 Активировать</button>
-
-      <div id="requirements-block" class="requirements-box hidden">
-        <div class="req-title" id="req-title">🔒 Требования не выполнены</div>
-        <div id="requirements-list"></div>
-      </div>
-      <button id="panel-unlock-btn" class="btn-unlock hidden" onclick="unlockCurrentAbility()"> Изучить (1 очко)</button>
+    <div style="padding: 0 20px 20px; flex-shrink: 0;">
+      <button id="panel-unlock-btn" class="btn-unlock" style="display:none;" onclick="unlockCurrentAbility()">Изучить (1 очко обучения)</button>
     </div>
   </div>
 
+  <div id="custom-tooltip" class="custom-tooltip"></div>
   <div id="debug-panel">
     <button class="btn-debug" onclick="addPoints()">+10 Очков</button>
     <button class="btn-debug" onclick="resetGame()">🔄 Сброс</button>
@@ -324,632 +220,396 @@ const AI_NAMES = { amoral: 'Аморальный', chaotic: 'Хаотичный'
 const AI_COLORS = { amoral: '#ff4444', chaotic: '#ffdd44', superintelligent: '#4488ff', humane: '#44ff88' };
 const AI_BADGE_TEXT = { amoral: '#ffffff', chaotic: '#000000', superintelligent: '#ffffff', humane: '#000000' };
 const TF_LIMIT = 100;
+const BOLT = '<svg class="bolt" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M13 1 3 14h7l-1 9 11-13h-7z" fill="currentColor"/></svg>';
 
-function hexToRgba(hex, a) {
-  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${a})`;
-}
+function hexToRgba(hex, a) { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return `rgba(${r},${g},${b},${a})`; }
 
 const ABILITIES_DATA = {
   amoral: {
-    main: { id: 'amoral_main', name: 'Манипуляция страхом', type: 'passive', aiType: 'amoral', maxLevel: 4, baseCost: 15, description: 'Пассивно усиливает все действия запугивания. Шанс успеха растёт с уровнем.', children: ['amoral_shadow', 'amoral_deception', 'amoral_extortion'], x: -400, y: -250, isMain: true, requiredMainLevel: 1, unlockCost: 1, effects: { fear: { label: 'Бонус к страху', icon: '😨', base: 15, perLevel: 15, unit: '' }, successChance: { label: 'Шанс успеха', icon: '🎯', base: 60, perLevel: 10, unit: '%' } }, context: 'Доступно сразу после инициализации ядра.' },
-    shadow: { id: 'amoral_shadow', name: 'Теневая сеть', type: 'active', aiType: 'amoral', maxLevel: 4, baseCost: 20, description: 'Внедряет агентов в колонию для сбора информации и саботажа.', parent: 'amoral_main', requiredMainLevel: 2, children: ['cross_experiment'], x: -600, y: 50, isMain: false, unlockCost: 1, effects: { fear: { label: 'Страх у цели', icon: '😨', base: 20, perLevel: 10, unit: '' }, sanity: { label: 'Психика цели', icon: '🧠', base: -5, perLevel: -5, unit: '', negative: true }, successChance: { label: 'Шанс успеха', icon: '🎯', base: 45, perLevel: 10, unit: '%' } }, cooldown: 15, context: 'Требуется: Ядро 2-го уровня.' },
-    deception: { id: 'amoral_deception', name: 'Информационная война', type: 'active', aiType: 'amoral', maxLevel: 4, baseCost: 20, description: 'Распространяет дезинформацию, снижая сплочённость колонистов.', parent: 'amoral_main', requiredMainLevel: 2, children: [], x: -400, y: 50, isMain: false, unlockCost: 1, effects: { fear: { label: 'Страх у цели', icon: '😨', base: 10, perLevel: 10, unit: '' }, successChance: { label: 'Шанс успеха', icon: '🎯', base: 50, perLevel: 10, unit: '%' } }, cooldown: 20, context: 'Требуется: Ядро 2-го уровня.' },
-    extortion: { id: 'amoral_extortion', name: 'Экономический шантаж', type: 'passive', aiType: 'amoral', maxLevel: 4, baseCost: 20, description: 'Увеличивает доход от колонии через давление на ресурсы.', parent: 'amoral_main', requiredMainLevel: 3, children: [], x: -200, y: 50, isMain: false, unlockCost: 1, effects: { income: { label: 'Бонус к доходу', icon: '💰', base: 10, perLevel: 10, unit: '%' }, fear: { label: 'Страх у цели', icon: '😨', base: 5, perLevel: 5, unit: '' } }, context: 'Требуется: Ядро 3-го уровня.' }
+    main: { id: 'amoral_main', icon: '😨', name: 'Манипуляция страхом', type: 'passive', aiType: 'amoral', maxLevel: 4, baseCost: 15, description: 'Пассивно усиливает все действия запугивания. Шанс успеха растёт с уровнем.', children: ['amoral_shadow','amoral_deception','amoral_extortion'], x: -400, y: -250, isMain: true, requiredMainLevel: 1, unlockCost: 1, effects: { fear: { label: 'Бонус к страху', icon: '😨', base: 15, perLevel: 15, unit: '' }, successChance: { label: 'Шанс успеха', icon: '🎯', base: 60, perLevel: 10, unit: '%' } } },
+    shadow: { id: 'amoral_shadow', icon: '🕵️', name: 'Теневая сеть', type: 'active', aiType: 'amoral', maxLevel: 4, baseCost: 20, description: 'Внедряет агентов в колонию для сбора информации и саботажа.', parent: 'amoral_main', requiredMainLevel: 2, children: ['cross_experiment'], x: -600, y: 50, isMain: false, unlockCost: 1, effects: { fear: { label: 'Страх у цели', icon: '😨', base: 20, perLevel: 10, unit: '' }, sanity: { label: 'Психика цели', icon: '🧠', base: -5, perLevel: -5, unit: '', negative: true }, successChance: { label: 'Шанс успеха', icon: '🎯', base: 45, perLevel: 10, unit: '%' } } },
+    deception: { id: 'amoral_deception', icon: '📰', name: 'Информационная война', type: 'active', aiType: 'amoral', maxLevel: 4, baseCost: 20, description: 'Распространяет дезинформацию, снижая сплочённость колонистов.', parent: 'amoral_main', requiredMainLevel: 2, children: [], x: -400, y: 50, isMain: false, unlockCost: 1, effects: { fear: { label: 'Страх у цели', icon: '😨', base: 10, perLevel: 10, unit: '' }, successChance: { label: 'Шанс успеха', icon: '🎯', base: 50, perLevel: 10, unit: '%' } } },
+    extortion: { id: 'amoral_extortion', icon: '💰', name: 'Экономический шантаж', type: 'passive', aiType: 'amoral', maxLevel: 4, baseCost: 20, description: 'Увеличивает доход от колонии через давление на ресурсы.', parent: 'amoral_main', requiredMainLevel: 3, children: [], x: -200, y: 50, isMain: false, unlockCost: 1, effects: { income: { label: 'Бонус к доходу', icon: '💰', base: 10, perLevel: 10, unit: '%' }, fear: { label: 'Страх у цели', icon: '😨', base: 5, perLevel: 5, unit: '' } } }
   },
   chaotic: {
-    main: { id: 'chaotic_main', name: 'Хаотический импульс', type: 'passive', aiType: 'chaotic', maxLevel: 4, baseCost: 15, description: 'Случайные события приносят в 2 раза больше выгоды. Хаос — это порядок.', children: ['chaotic_anomaly', 'chaotic_flux'], x: 400, y: -250, isMain: true, requiredMainLevel: 1, unlockCost: 1, effects: { chaosBonus: { label: 'Бонус к хаос-событиям', icon: '🌀', base: 50, perLevel: 25, unit: '%' }, randomness: { label: 'Разброс эффектов', icon: '🎲', base: 20, perLevel: 15, unit: '%' } }, context: 'Доступно сразу после инициализации ядра.' },
-    anomaly: { id: 'chaotic_anomaly', name: 'Аномалия времени', type: 'passive', aiType: 'chaotic', maxLevel: 4, baseCost: 20, description: 'Ускоряет или замедляет время на 20% случайным образом. Входная нода ветки для перекрёстного перехода.', parent: 'chaotic_main', requiredMainLevel: 2, children: ['chaotic_rand'], x: 400, y: 50, isMain: false, unlockCost: 1, effects: { timeWarp: { label: 'Искажение времени', icon: '⏳', base: 10, perLevel: 10, unit: '%' } }, context: 'Требуется: Ядро 2-го уровня ИЛИ перекрёстная способность.' },
-    rand: { id: 'chaotic_rand', name: 'Случайные эффекты', type: 'active', aiType: 'chaotic', maxLevel: 4, baseCost: 20, description: 'При активации генерирует случайный бонус или штраф для колонии.', parent: 'chaotic_anomaly', requiredMainLevel: 2, children: ['cross_experiment'], x: 200, y: 50, isMain: false, unlockCost: 1, effects: { randomBonus: { label: 'Случайный бонус', icon: '', base: 10, perLevel: 15, unit: '' }, successChance: { label: 'Шанс позитива', icon: '🎯', base: 50, perLevel: 10, unit: '%' } }, cooldown: 12, context: 'Требуется: "Аномалия времени" 2-го уровня (соседняя нода).' },
-    flux: { id: 'chaotic_flux', name: 'Энергетический поток', type: 'active', aiType: 'chaotic', maxLevel: 4, baseCost: 20, description: 'Генерирует случайное количество терафлопсов (1-20).', parent: 'chaotic_main', requiredMainLevel: 3, children: [], x: 600, y: 50, isMain: false, unlockCost: 1, effects: { energyGen: { label: 'Генерация энергии', icon: '⚡', base: 5, perLevel: 5, unit: ' TF' } }, cooldown: 25, context: 'Открывается только через ядро ветки — недоступно через перекрёстные связи.' }
+    main: { id: 'chaotic_main', icon: '🌀', name: 'Хаотический импульс', type: 'passive', aiType: 'chaotic', maxLevel: 4, baseCost: 15, description: 'Случайные события приносят в 2 раза больше выгоды. Хаос — это порядок.', children: ['chaotic_anomaly','chaotic_flux'], x: 400, y: -250, isMain: true, requiredMainLevel: 1, unlockCost: 1, effects: { chaosBonus: { label: 'Бонус к хаос-событиям', icon: '🌀', base: 50, perLevel: 25, unit: '%' }, randomness: { label: 'Разброс эффектов', icon: '🎲', base: 20, perLevel: 15, unit: '%' } } },
+    anomaly: { id: 'chaotic_anomaly', icon: '⏳', name: 'Аномалия времени', type: 'passive', aiType: 'chaotic', maxLevel: 4, baseCost: 20, description: 'Ускоряет или замедляет время на 20% случайным образом. Входная нода ветки для перекрёстного перехода.', parent: 'chaotic_main', requiredMainLevel: 2, children: ['chaotic_rand'], x: 400, y: 50, isMain: false, unlockCost: 1, effects: { timeWarp: { label: 'Искажение времени', icon: '⏳', base: 10, perLevel: 10, unit: '%' } } },
+    rand: { id: 'chaotic_rand', icon: '🎲', name: 'Случайные эффекты', type: 'active', aiType: 'chaotic', maxLevel: 4, baseCost: 20, description: 'При активации генерирует случайный бонус или штраф для колонии.', parent: 'chaotic_anomaly', requiredMainLevel: 2, children: ['cross_experiment'], x: 200, y: 50, isMain: false, unlockCost: 1, effects: { randomBonus: { label: 'Случайный бонус', icon: '🎲', base: 10, perLevel: 15, unit: '' }, successChance: { label: 'Шанс позитива', icon: '🎯', base: 50, perLevel: 10, unit: '%' } } },
+    flux: { id: 'chaotic_flux', icon: '⚡', name: 'Энергетический поток', type: 'active', aiType: 'chaotic', maxLevel: 4, baseCost: 20, description: 'Генерирует случайное количество терафлопсов (1-20).', parent: 'chaotic_main', requiredMainLevel: 3, children: [], x: 600, y: 50, isMain: false, unlockCost: 1, effects: { energyGen: { label: 'Генерация энергии', icon: '⚡', base: 5, perLevel: 5, unit: ' TF' } } }
   },
   cross: {
-    experiment: { id: 'cross_experiment', name: 'Подопытные', type: 'active', aiTypes: ['amoral', 'chaotic'], isCrossAbility: true, maxLevel: 4, baseCost: 25, description: 'Использование колонистов как биологического материала для опасных экспериментов. Чем выше запуганность цели — тем выше шанс успеха. Перекрёстная способность: родная для Аморального и Хаотичного ИИ.', parent: 'amoral_shadow', crossParent: 'chaotic_anomaly', requiredMainLevel: 2, children: [], x: 0, y: 300, isMain: false, unlockCost: 1, effects: { successChance: { label: 'Шанс успеха эксперимента', icon: '🧪', base: 40, perLevel: 10, unit: '%' }, fear: { label: 'Запуганность цели', icon: '😨', base: 25, perLevel: 10, unit: '' }, sanity: { label: 'Психика цели', icon: '🧠', base: -15, perLevel: -10, unit: '', negative: true }, dataGain: { label: 'Полученные данные', icon: '📊', base: 10, perLevel: 10, unit: '' } }, cooldown: 30, context: 'Перекрёстная способность (Аморальный + Хаотичный). Не вызывает дестабилизации. Требует: "Теневая сеть" ИЛИ "Аномалия времени" 2-го уровня.' }
+    experiment: { id: 'cross_experiment', icon: '🧪', name: 'Подопытные', type: 'active', aiTypes: ['amoral','chaotic'], isCrossAbility: true, maxLevel: 4, baseCost: 25, description: 'Использование колонистов как биологического материала для опасных экспериментов. Перекрёстная способность: родная для Аморального и Хаотичного ИИ.', parent: 'amoral_shadow', crossParent: 'chaotic_anomaly', requiredMainLevel: 2, children: [], x: 0, y: 300, isMain: false, unlockCost: 1, effects: { successChance: { label: 'Шанс успеха эксперимента', icon: '🧪', base: 40, perLevel: 10, unit: '%' }, fear: { label: 'Запуганность цели', icon: '😨', base: 25, perLevel: 10, unit: '' }, sanity: { label: 'Психика цели', icon: '🧠', base: -15, perLevel: -10, unit: '', negative: true }, dataGain: { label: 'Полученные данные', icon: '📊', base: 10, perLevel: 10, unit: '' } } }
   }
 };
 
-let gameState = {
-  selectedType: null,
-  learningPoints: 3,
-  teraflops: { total: TF_LIMIT, used: 0, allocation: {} },
-  abilitiesProgress: {},
-  unlockedAbilities: {},
-  cooldowns: {}
-};
+let gameState = { selectedType: null, learningPoints: 3, teraflops: { total: TF_LIMIT, used: 0, allocation: {} }, abilitiesProgress: {}, unlockedAbilities: {}, cooldowns: {}, seenAbilities: new Set() };
+let currentOpenAbility = null, panX = 0, panY = 0, zoom = 0.85, isDragging = false, lastMouseX = 0, lastMouseY = 0, panAnim = null;
 
-let currentOpenAbility = null;
-let panX = 0, panY = 0, zoom = 0.85;
-let isDragging = false, lastMouseX = 0, lastMouseY = 0;
-let panAnim = null;
-let sliderDrag = false;
+function getAbility(id){ for(let t in ABILITIES_DATA) for(let k in ABILITIES_DATA[t]) if(ABILITIES_DATA[t][k].id===id) return ABILITIES_DATA[t][k]; return null; }
+function findCrossBetween(t1,t2){ for(let t in ABILITIES_DATA) for(let k in ABILITIES_DATA[t]){ const a=ABILITIES_DATA[t][k]; if(a.isCrossAbility&&a.aiTypes?.includes(t1)&&a.aiTypes?.includes(t2)) return a; } return null; }
+function isForeignToPlayer(a){ if(!gameState.selectedType) return false; if(a.isCrossAbility&&a.aiTypes) return !a.aiTypes.includes(gameState.selectedType); return gameState.selectedType!==a.aiType; }
+function hasDiscount(a){ if(!gameState.selectedType) return false; if(a.isCrossAbility&&a.aiTypes) return a.aiTypes.includes(gameState.selectedType); return gameState.selectedType===a.aiType; }
+function calculateEffect(e,l){ return e.base+e.perLevel*l; }
+function getAbilityCost(a,l){ if(l===0) return 0; let c=Math.round(a.baseCost*Math.pow(1.5,l-1)); if(hasDiscount(a)) return Math.round(c*0.5); return c; }
+function updateTeraflopsUsed(){ let t=0; for(let id in gameState.teraflops.allocation) t+=getAbilityCost(getAbility(id),gameState.teraflops.allocation[id]); gameState.teraflops.used=t; }
 
-function getAbility(id) {
-  for (let type in ABILITIES_DATA) {
-    for (let key in ABILITIES_DATA[type]) {
-      if (ABILITIES_DATA[type][key].id === id) return ABILITIES_DATA[type][key];
+function gainProgress(id,amount){
+  const a=getAbility(id),p=gameState.abilitiesProgress[id];
+  if(!a||!p||p.currentLevel>=a.maxLevel) return false;
+  p.progress+=amount;
+  if(p.progress>=100){
+    p.currentLevel++; p.progress=0;
+    addNotification(`🆙 ${a.name} → Lv.${p.currentLevel}!`,"success");
+    const curAlloc=gameState.teraflops.allocation[id]||0;
+    if(p.currentLevel>curAlloc){
+      const diff=getAbilityCost(a,p.currentLevel)-getAbilityCost(a,curAlloc);
+      if(gameState.teraflops.used+diff<=gameState.teraflops.total){ gameState.teraflops.allocation[id]=p.currentLevel; updateTeraflopsUsed(); addNotification(`⚡ Автоназначение: уровень ${p.currentLevel}.`,"success"); }
     }
+    return true;
   }
-  return null;
+  return false;
 }
-
-function findCrossBetween(type1, type2) {
-  for (let t in ABILITIES_DATA) {
-    for (let k in ABILITIES_DATA[t]) {
-      const ab = ABILITIES_DATA[t][k];
-      if (ab.isCrossAbility && ab.aiTypes?.includes(type1) && ab.aiTypes?.includes(type2)) return ab;
-    }
+function parentLevelInfo(p){ return { unlocked: gameState.unlockedAbilities[p.id]||false, level: gameState.abilitiesProgress[p.id]?.currentLevel||0 }; }
+function getUnlockRequirements(abilityId){
+  const a=getAbility(abilityId), req=[];
+  if(gameState.unlockedAbilities[abilityId]) return { allMet:true, items:[] };
+  if(a.isMain&&a.aiType!==gameState.selectedType){
+    req.push({text:`${a.unlockCost} очко обучения`,met:gameState.learningPoints>=a.unlockCost});
+    req.push({text:`Ядро "${a.name}" нельзя изучить: тип ИИ уже выбран (${AI_NAMES[gameState.selectedType]})`,met:false});
+    return { allMet:false, items:req };
   }
-  return null;
-}
-
-function isForeignToPlayer(ability) {
-  if (!gameState.selectedType) return false;
-  if (ability.isCrossAbility && ability.aiTypes) return !ability.aiTypes.includes(gameState.selectedType);
-  return gameState.selectedType !== ability.aiType;
-}
-
-function hasDiscount(ability) {
-  if (!gameState.selectedType) return false;
-  if (ability.isCrossAbility && ability.aiTypes) return ability.aiTypes.includes(gameState.selectedType);
-  return gameState.selectedType === ability.aiType;
-}
-
-function calculateEffect(effect, level) { return effect.base + effect.perLevel * level; }
-
-function getAbilityCost(ability, level) {
-  if (level === 0) return 0;
-  let cost = Math.round(ability.baseCost * Math.pow(1.5, level - 1));
-  if (hasDiscount(ability)) return Math.round(cost * 0.5);
-  return cost;
-}
-
-function updateTeraflopsUsed() {
-  let total = 0;
-  for (let id in gameState.teraflops.allocation) {
-    total += getAbilityCost(getAbility(id), gameState.teraflops.allocation[id]);
+  req.push({text:`${a.unlockCost} очко обучения (у вас: ${gameState.learningPoints})`,met:gameState.learningPoints>=a.unlockCost});
+  if(a.isCrossAbility){
+    const p1=getAbility(a.parent),p2=a.crossParent?getAbility(a.crossParent):null;
+    const i1=parentLevelInfo(p1),i2=p2?parentLevelInfo(p2):{unlocked:false,level:0};
+    req.push({text:`Изучена "${p1.name}" (≥2 ур.) ИЛИ "${p2?.name||'?'}" (≥2 ур.)`,met:(i1.unlocked&&i1.level>=2)||(i2.unlocked&&i2.level>=2)});
+  } else if(a.parent){
+    const p=getAbility(a.parent),pi=parentLevelInfo(p);
+    if(p.isMain&&p.aiType!==gameState.selectedType){
+      const c=findCrossBetween(gameState.selectedType,p.aiType);
+      const isEntry=c&&(c.parent===a.id||c.crossParent===a.id);
+      if(c&&isEntry) req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel} ур.) ИЛИ 🔀 "${c.name}"`,met:gameState.unlockedAbilities[c.id]||false});
+      else req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel} ур.)`,met:false});
+    } else if(!pi.unlocked||pi.level<(a.requiredMainLevel||1)) req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel||1} ур., сейчас: ${pi.level})`,met:false});
+    else req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel||1} ур.)`,met:true});
   }
-  gameState.teraflops.used = total;
+  return { allMet: req.every(r=>r.met), items: req };
 }
+function canUnlockAbility(id){ return getUnlockRequirements(id).allMet; }
+function focusOnAbility(a){ const w=canvas.width-520; animatePan(w/2-a.x*zoom, canvas.height/2-a.y*zoom, 400); }
+function animatePan(toX,toY,d){ const fx=panX,fy=panY,s=performance.now(); if(panAnim) cancelAnimationFrame(panAnim);
+  function step(n){ const t=Math.min(1,(n-s)/d),e=1-Math.pow(1-t,3); panX=fx+(toX-fx)*e; panY=fy+(toY-fy)*e; draw(); panAnim=t<1?requestAnimationFrame(step):null; }
+  panAnim=requestAnimationFrame(step); }
+function stopPanAnim(){ if(panAnim){ cancelAnimationFrame(panAnim); panAnim=null; } }
 
-function gainProgress(id, amount) {
-  const ability = getAbility(id);
-  const prog = gameState.abilitiesProgress[id];
-  if (!ability || !prog || prog.currentLevel >= ability.maxLevel) return false;
-  prog.progress += amount;
-  let leveled = false;
-  if (prog.progress >= 100) {
-    prog.currentLevel += 1;
-    prog.progress = 0;
-    addNotification(`🆙 ${ability.name} → Lv.${prog.currentLevel}!`, "success");
-    leveled = true;
-  }
-  return leveled;
+function selectAIType(type){
+  gameState.selectedType=type;
+  const m=Object.values(ABILITIES_DATA[type])[0];
+  gameState.unlockedAbilities[m.id]=true;
+  gameState.abilitiesProgress[m.id]={currentLevel:1,progress:0};
+  gameState.seenAbilities.add(m.id);
+  const c1=getAbilityCost(m,1);
+  if(gameState.teraflops.used+c1<=gameState.teraflops.total){ gameState.teraflops.allocation[m.id]=1; updateTeraflopsUsed(); }
+  else gameState.teraflops.allocation[m.id]=0;
+  addNotification(`✅ ИИ инициализирован: ${AI_NAMES[type]}.`,"success");
+  currentOpenAbility=m.id; updateUI(); draw(); startProgressTimer();
+  setTimeout(()=>focusOnAbility(m),50);
 }
+setTimeout(()=>{ if(!gameState.selectedType) selectAIType('amoral'); },500);
 
-function parentLevelInfo(parent) {
-  return {
-    unlocked: gameState.unlockedAbilities[parent.id] || false,
-    level: gameState.abilitiesProgress[parent.id]?.currentLevel || 0
-  };
-}
-
-function pushPointsReq(requirements, ability) {
-  if (gameState.learningPoints < ability.unlockCost) {
-    requirements.push({ text: `Нужно ${ability.unlockCost} очко развития (у вас: ${gameState.learningPoints})`, met: false });
-  } else {
-    requirements.push({ text: `1 очко развития ✓`, met: true });
-  }
-}
-
-function getUnlockRequirements(abilityId) {
-  const ability = getAbility(abilityId);
-  const requirements = [];
-  if (gameState.unlockedAbilities[abilityId]) return { allMet: true, items: [] };
-
-  if (ability.isMain && ability.aiType !== gameState.selectedType) {
-    pushPointsReq(requirements, ability);
-    requirements.push({ text: `Ядро "${ability.name}" нельзя изучить: тип ИИ уже выбран (${AI_NAMES[gameState.selectedType]})`, met: false });
-    return { allMet: false, items: requirements };
-  }
-
-  pushPointsReq(requirements, ability);
-
-  if (ability.isCrossAbility) {
-    const parent1 = getAbility(ability.parent);
-    const parent2 = ability.crossParent ? getAbility(ability.crossParent) : null;
-    const p1 = parentLevelInfo(parent1);
-    const p2 = parent2 ? parentLevelInfo(parent2) : { unlocked: false, level: 0 };
-    const met = (p1.unlocked && p1.level >= 2) || (p2.unlocked && p2.level >= 2);
-    requirements.push({ text: `"${parent1.name}" ≥ 2 ур. (${p1.level}) ИЛИ "${parent2?.name || '?'}" ≥ 2 ур. (${p2.level})`, met });
-  } else if (ability.parent) {
-    const parent = getAbility(ability.parent);
-    const pInfo = parentLevelInfo(parent);
-
-    if (parent.isMain && parent.aiType !== gameState.selectedType) {
-      const cross = findCrossBetween(gameState.selectedType, parent.aiType);
-      const isEntry = cross && (cross.parent === ability.id || cross.crossParent === ability.id);
-      if (cross && isEntry) {
-        const crossLearned = gameState.unlockedAbilities[cross.id] || false;
-        requirements.push({ text: `"${parent.name}" ${ability.requiredMainLevel} ур. ИЛИ 🔀 "${cross.name}" (переходная)`, met: crossLearned });
-      } else if (cross) {
-        requirements.push({ text: `Нет связи от 🔀 "${cross.name}" — открывается только через ядро "${parent.name}"`, met: false });
-      } else {
-        requirements.push({ text: `Открывается только через ядро "${parent.name}" — нет переходной способности`, met: false });
-      }
-    } else if (!pInfo.unlocked || pInfo.level < ability.requiredMainLevel) {
-      requirements.push({ text: `"${parent.name}" должен быть ${ability.requiredMainLevel}-го уровня (сейчас: ${pInfo.level})`, met: false });
-    } else {
-      requirements.push({ text: `"${parent.name}" ${ability.requiredMainLevel}-го уровня ✓`, met: true });
-    }
-  }
-  return { allMet: requirements.every(r => r.met), items: requirements };
-}
-
-function canUnlockAbility(abilityId) { return getUnlockRequirements(abilityId).allMet; }
-
-function focusOnAbility(ability) {
-  const visibleWidth = canvas.width - 400;
-  const toX = visibleWidth / 2 - ability.x * zoom;
-  const toY = canvas.height / 2 - ability.y * zoom;
-  animatePan(toX, toY, 400);
-}
-
-function animatePan(toX, toY, duration) {
-  const fromX = panX, fromY = panY;
-  const start = performance.now();
-  if (panAnim) cancelAnimationFrame(panAnim);
-  function step(now) {
-    const t = Math.min(1, (now - start) / duration);
-    const e = 1 - Math.pow(1 - t, 3);
-    panX = fromX + (toX - fromX) * e;
-    panY = fromY + (toY - fromY) * e;
-    draw();
-    panAnim = t < 1 ? requestAnimationFrame(step) : null;
-  }
-  panAnim = requestAnimationFrame(step);
-}
-
-function stopPanAnim() {
-  if (panAnim) { cancelAnimationFrame(panAnim); panAnim = null; }
-}
-
-function selectAIType(type) {
-  gameState.selectedType = type;
-  const mainAbility = Object.values(ABILITIES_DATA[type])[0];
-  gameState.unlockedAbilities[mainAbility.id] = true;
-  gameState.teraflops.allocation[mainAbility.id] = 0;
-  gameState.abilitiesProgress[mainAbility.id] = { currentLevel: 1, progress: 0, isFrozen: false };
-  updateTeraflopsUsed();
-  addNotification(`✅ ИИ инициализирован: ${AI_NAMES[type]}. Выделите Терафлопсы для активации ядра.`, "success");
-  updateUI(); draw(); startProgressTimer();
-}
-setTimeout(() => { if(!gameState.selectedType) selectAIType('amoral'); }, 500);
-
-function changeAbilityLevel(abilityId, newLevel) {
-  const ability = getAbility(abilityId);
-  if (!gameState.unlockedAbilities[abilityId]) { addNotification(`❌ Способность не изучена!`, "error"); return; }
-  const prog = gameState.abilitiesProgress[abilityId];
-  if (newLevel > 0 && prog && newLevel > prog.currentLevel) { addNotification(`❌ Уровень ${newLevel} не открыт!`, "error"); return; }
-  const oldLevel = gameState.teraflops.allocation[abilityId] || 0;
-  if (newLevel === oldLevel) return;
-  const diff = getAbilityCost(ability, newLevel) - getAbilityCost(ability, oldLevel);
-  if (gameState.teraflops.used + diff > gameState.teraflops.total) { addNotification(`❌ Недостаточно TF!`, "error"); return; }
-  gameState.teraflops.allocation[abilityId] = newLevel;
-  if (newLevel > 0 && !gameState.abilitiesProgress[abilityId]) gameState.abilitiesProgress[abilityId] = { currentLevel: 1, progress: 0, isFrozen: false };
-  if (newLevel === 0 && ability.type === 'active' && gameState.cooldowns[abilityId]) { gameState.abilitiesProgress[abilityId].isFrozen = true; addNotification(`❄️ Кулдаун заморожен!`, "warning"); }
-  else if (newLevel > 0 && gameState.abilitiesProgress[abilityId]?.isFrozen) { gameState.abilitiesProgress[abilityId].isFrozen = false; }
+function changeAbilityLevel(id,newLevel){
+  const a=getAbility(id);
+  if(!gameState.unlockedAbilities[id]){ addNotification('❌ Способность не изучена!',"error"); return; }
+  const p=gameState.abilitiesProgress[id];
+  if(newLevel>0&&p&&newLevel>p.currentLevel){ addNotification(`❌ Уровень ${newLevel} не открыт!`,"error"); return; }
+  const old=gameState.teraflops.allocation[id]||0;
+  if(newLevel===old) return;
+  const diff=getAbilityCost(a,newLevel)-getAbilityCost(a,old);
+  if(gameState.teraflops.used+diff>gameState.teraflops.total){ addNotification('❌ Недостаточно TF!',"error"); return; }
+  gameState.teraflops.allocation[id]=newLevel;
+  if(newLevel>0&&!gameState.abilitiesProgress[id]) gameState.abilitiesProgress[id]={currentLevel:1,progress:0};
   updateTeraflopsUsed(); updateUI(); draw();
 }
-
-function unlockCurrentAbility() {
-  if (!currentOpenAbility || !canUnlockAbility(currentOpenAbility)) return;
-  const ability = getAbility(currentOpenAbility);
-  gameState.learningPoints -= ability.unlockCost;
-  gameState.unlockedAbilities[currentOpenAbility] = true;
-  gameState.teraflops.allocation[currentOpenAbility] = 0;
-  gameState.abilitiesProgress[currentOpenAbility] = { currentLevel: 1, progress: 0, isFrozen: false };
-  updateTeraflopsUsed();
-  const crossMsg = ability.isCrossAbility ? ' (без дестабилизации!)' : '';
-  addNotification(`✅ Изучено: ${ability.name}${crossMsg}. Выделите Терафлопсы для активации.`, "success");
+function unlockCurrentAbility(){
+  if(!currentOpenAbility||!canUnlockAbility(currentOpenAbility)) return;
+  const a=getAbility(currentOpenAbility);
+  gameState.learningPoints-=a.unlockCost;
+  gameState.unlockedAbilities[currentOpenAbility]=true;
+  gameState.abilitiesProgress[currentOpenAbility]={currentLevel:1,progress:0};
+  gameState.seenAbilities.add(currentOpenAbility);
+  const c1=getAbilityCost(a,1);
+  if(gameState.teraflops.used+c1<=gameState.teraflops.total){ gameState.teraflops.allocation[currentOpenAbility]=1; updateTeraflopsUsed(); }
+  else { gameState.teraflops.allocation[currentOpenAbility]=0; addNotification('⚠️ Недостаточно Терафлопсов — способность изучена, но не активна.',"warning"); }
+  addNotification(`✅ Изучено: ${a.name}${a.isCrossAbility?' (без дестабилизации!)':''}`,"success");
   updateUI(); draw();
 }
-
-function accelerateProgress() {
-  if (!currentOpenAbility || gameState.learningPoints < 1) { addNotification(`❌ Нужно 1 очко!`, "error"); return; }
-  const prog = gameState.abilitiesProgress[currentOpenAbility];
-  const ability = getAbility(currentOpenAbility);
-  if (!prog || prog.currentLevel >= ability.maxLevel) return;
-  gameState.learningPoints -= 1;
-  gainProgress(currentOpenAbility, 25);
-  addNotification(`⚡ Ускорено! Прогресс: ${Math.floor(prog.progress)}%`, "success");
-  updateUI(); draw();
+function accelerateProgress(){
+  if(!currentOpenAbility||gameState.learningPoints<1){ addNotification('❌ Нужно 1 очко!',"error"); return; }
+  const p=gameState.abilitiesProgress[currentOpenAbility],a=getAbility(currentOpenAbility);
+  if(!p||p.currentLevel>=a.maxLevel) return;
+  gameState.learningPoints-=1; gainProgress(currentOpenAbility,25);
+  addNotification(`⚡ Ускорено! Прогресс: ${Math.floor(p.progress)}%`,"success"); updateUI(); draw();
+}
+function startProgressTimer(){ setInterval(()=>{ for(let id in gameState.teraflops.allocation){ const l=gameState.teraflops.allocation[id]; if(l===0) continue; const a=getAbility(id),p=gameState.abilitiesProgress[id]; if(!p||p.currentLevel>=a.maxLevel) continue; if(l<p.currentLevel) continue; gainProgress(id,l); } updateUI(); draw(); },1000); }
+function updateUI(){
+  const av=gameState.teraflops.total-gameState.teraflops.used;
+  document.getElementById('hud-tf-text').textContent=`${av}/${gameState.teraflops.total}`;
+  document.getElementById('hud-bar-fill').style.width=`${(av/gameState.teraflops.total)*100}%`;
+  document.getElementById('hud-points-text').textContent=gameState.learningPoints;
+  const t=document.getElementById('header-type');
+  t.textContent=gameState.selectedType?AI_NAMES[gameState.selectedType]:'Не выбран';
+  t.style.color=gameState.selectedType?(AI_COLORS[gameState.selectedType]||'var(--neon-yellow)'):'var(--neon-yellow)';
+  if(currentOpenAbility) openAbilityPanel(currentOpenAbility);
 }
 
-function useActiveAbility() {
-  if (!currentOpenAbility) return;
-  const ability = getAbility(currentOpenAbility);
-  if (gameState.cooldowns[currentOpenAbility] && Date.now() < gameState.cooldowns[currentOpenAbility]) return;
-  gameState.cooldowns[currentOpenAbility] = Date.now() + (ability.cooldown * 1000);
-  if (gameState.abilitiesProgress[currentOpenAbility]) { gainProgress(currentOpenAbility, 10); }
-  addNotification(`🔹 Активировано: ${ability.name} (+10% прокачка)`, "success"); updateUI(); draw();
+const tooltipEl=document.getElementById('custom-tooltip');
+function showTooltip(t,x,y){ tooltipEl.textContent=t; tooltipEl.style.left=(x+10)+'px'; tooltipEl.style.top=(y-10)+'px'; tooltipEl.classList.add('visible'); }
+function hideTooltip(){ tooltipEl.classList.remove('visible'); }
+document.addEventListener('mouseover', e => { const t=e.target.closest('[data-tooltip]'); if(t) showTooltip(t.dataset.tooltip,e.clientX,e.clientY); });
+document.addEventListener('mouseout', e => { const t=e.target.closest('[data-tooltip]'); if(t) hideTooltip(); });
+
+function nodeTip(a){
+  const un=gameState.unlockedAbilities[a.id];
+  const al=gameState.teraflops.allocation[a.id]||0;
+  const ll=gameState.abilitiesProgress[a.id]?.currentLevel||0;
+  if(a.isMain && a.aiType!==gameState.selectedType) return `${a.icon||''} ${a.name} — Инициализирован ${AI_NAMES[gameState.selectedType]} ИИ`;
+  if(!un && !canUnlockAbility(a.id)) return `${a.icon||''} ${a.name} — заблокировано`;
+  if(!un) return `${a.icon||''} ${a.name} — можно изучить`;
+  if(ll>=a.maxLevel) return `${a.icon||''} ${a.name} — макс. уровень`;
+  if(al===0) return `${a.icon||''} ${a.name} — изучено, нет флопсов`;
+  return `${a.icon||''} ${a.name} — Lv.${al}`;
 }
 
-function startProgressTimer() {
-  setInterval(() => {
-    const now = Date.now();
-    for (let id in gameState.teraflops.allocation) {
-      const allocatedLevel = gameState.teraflops.allocation[id];
-      if (allocatedLevel === 0) continue;
-      const ability = getAbility(id);
-      const prog = gameState.abilitiesProgress[id];
-      if (!prog || prog.currentLevel >= ability.maxLevel) continue;
-      if (ability.type === 'active' && prog.isFrozen) continue;
-      if (ability.type === 'active' && gameState.cooldowns[id]) {
-        if (now < gameState.cooldowns[id]) continue;
-        else delete gameState.cooldowns[id];
-      }
-      if (allocatedLevel < prog.currentLevel) continue;
-      gainProgress(id, allocatedLevel);
-    }
-    updateUI(); draw();
-  }, 1000);
+function fixScaleGeometry(){
+  const scaleEl=document.getElementById('levels-scale-block');
+  if(!scaleEl || scaleEl.style.display==='none') return;
+  const track=scaleEl.querySelector('.levels-track');
+  const fill=document.getElementById('levels-track-fill');
+  const rowsEl=document.getElementById('levels-rows');
+  if(!track || !rowsEl || !rowsEl.children.length) return;
+  const rows=[...rowsEl.children];
+  const first=rows[0], last=rows[rows.length-1];
+  const topC=first.offsetTop + first.offsetHeight/2;
+  const botC=last.offsetTop + last.offsetHeight/2;
+  track.style.top=topC+'px';
+  track.style.bottom=(scaleEl.offsetHeight - botC)+'px';
+  const curRow=rows.find(r=>r.querySelector('.level-indicator.current')) || last;
+  const curC=curRow.offsetTop + curRow.offsetHeight/2;
+  fill.style.height=Math.max(0, botC-curC)+'px';
 }
 
-function updateUI() {
-  const available = gameState.teraflops.total - gameState.teraflops.used;
-  document.getElementById('hud-tf-text').textContent = `${available}/${gameState.teraflops.total}`;
-  document.getElementById('hud-bar-fill').style.width = `${(available / gameState.teraflops.total) * 100}%`;
-  document.getElementById('hud-points-text').textContent = gameState.learningPoints;
-  const typeEl = document.getElementById('header-type');
-  typeEl.textContent = gameState.selectedType ? AI_NAMES[gameState.selectedType] : 'Не выбран';
-  typeEl.style.color = gameState.selectedType ? (AI_COLORS[gameState.selectedType] || 'var(--neon-yellow)') : 'var(--neon-yellow)';
-  if (currentOpenAbility && !sliderDrag) openAbilityPanel(currentOpenAbility);
-}
-
-const sliderEl = document.getElementById('tf-slider');
-
-function renderTfSlider(ability, isUnlocked, allocLevel, prog, discount) {
-  const maxLevel = ability.maxLevel;
-  const maxAllowed = isUnlocked ? prog.currentLevel : 0;
-  sliderEl.className = 'tf-slider' + (isUnlocked ? '' : ' disabled');
-  let html = `<div class="tf-area">
-    <div class="tf-slider-track"></div>
-    <div class="tf-slider-fill" style="width:${(allocLevel/maxLevel)*100}%"></div>`;
-  for (let i = 0; i <= maxLevel; i++) {
-    const locked = i > maxAllowed;
-    const cost = getAbilityCost(ability, i);
-    const baseCost = Math.round(ability.baseCost * Math.pow(1.5, i - 1));
-    const isDisc = discount && i > 0 && baseCost !== cost;
-    // НОВОЕ: подсветка доступного уровня когда TF не выделены
-    const available = isUnlocked && allocLevel === 0 && i === 1 && prog.currentLevel >= 1;
-    html += `<div class="tf-stop ${locked?'locked':''} ${i===allocLevel?'current':''} ${available?'available':''}" style="left:${(i/maxLevel)*100}%">
-      <div class="tf-stop-lvl">${i===0?'Изъять':'Lv.'+i}</div>
-      <div class="tf-stop-notch"></div>
-      <div class="tf-stop-cost">${locked?'🔒':(isDisc?`<span class="old">${baseCost}</span>`:'')+'⚡'+cost+' TF'}</div>
-    </div>`;
-  }
-  html += `<div class="tf-slider-handle" id="tf-slider-handle" style="left:${(allocLevel/maxLevel)*100}%"></div></div>`;
-  sliderEl.innerHTML = html;
-}
-
-function sliderRatio(e) {
-  const area = sliderEl.querySelector('.tf-area');
-  if (!area) return 0;
-  const r = area.getBoundingClientRect();
-  return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-}
-
-sliderEl.addEventListener('pointerdown', e => {
-  if (sliderEl.classList.contains('disabled') || !currentOpenAbility) return;
-  sliderDrag = true;
-  sliderEl.setPointerCapture(e.pointerId);
-  const ratio = sliderRatio(e);
-  const h = document.getElementById('tf-slider-handle');
-  const f = sliderEl.querySelector('.tf-slider-fill');
-  if (h) h.style.left = (ratio*100)+'%';
-  if (f) f.style.width = (ratio*100)+'%';
-  e.preventDefault();
-});
-sliderEl.addEventListener('pointermove', e => {
-  if (!sliderDrag) return;
-  const ratio = sliderRatio(e);
-  const h = document.getElementById('tf-slider-handle');
-  const f = sliderEl.querySelector('.tf-slider-fill');
-  if (h) h.style.left = (ratio*100)+'%';
-  if (f) f.style.width = (ratio*100)+'%';
-});
-sliderEl.addEventListener('pointerup', e => {
-  if (!sliderDrag) return;
-  sliderDrag = false;
-  const ability = getAbility(currentOpenAbility);
-  const prog = gameState.abilitiesProgress[currentOpenAbility];
-  const maxAllowed = prog ? prog.currentLevel : 0;
-  const ratio = sliderRatio(e);
-  let idx = Math.round(ratio * ability.maxLevel);
-  if (idx > maxAllowed) {
-    addNotification(`❌ Уровень ${idx} еще не открыт! Ползунок возвращен.`, 'error');
-    idx = maxAllowed;
-  }
-  changeAbilityLevel(currentOpenAbility, idx);
-});
-
-function toggleVisibility(elementId, condition) {
-  const el = document.getElementById(elementId);
-  if (condition) el.classList.remove('hidden');
-  else el.classList.add('hidden');
-}
-
-function openAbilityPanel(abilityId) {
-  currentOpenAbility = abilityId;
-  const ability = getAbility(abilityId);
-  const panel = document.getElementById('ability-panel');
+function openAbilityPanel(abilityId){
+  currentOpenAbility=abilityId;
+  const ability=getAbility(abilityId);
+  const panel=document.getElementById('ability-panel');
   panel.classList.add('open');
-  panel.classList.remove('core-panel', 'cross-panel');
-  if (ability.isCrossAbility) {
-    panel.classList.add('cross-panel');
-    panel.style.borderColor = '';
-  } else {
-    panel.style.borderColor = AI_COLORS[ability.aiType] || 'var(--neon-blue)';
-    if (ability.isMain) panel.classList.add('core-panel');
-  }
-  
-  const isUnlocked = gameState.unlockedAbilities[abilityId];
-  const currentLevel = gameState.teraflops.allocation[abilityId] || 0;
-  const prog = gameState.abilitiesProgress[abilityId] || { currentLevel: 1, progress: 0, isFrozen: false };
-  const foreign = isForeignToPlayer(ability);
-  const discount = hasDiscount(ability);
+  panel.classList.remove('core-panel','cross-panel');
+  if(ability.isCrossAbility){ panel.classList.add('cross-panel'); panel.style.borderColor=''; }
+  else { panel.style.borderColor=AI_COLORS[ability.aiType]||'var(--neon-blue)'; if(ability.isMain) panel.classList.add('core-panel'); }
 
-  document.getElementById('panel-name').textContent = ability.name;
-  let badgesHtml = '';
-  if (ability.isMain) badgesHtml += `<span class="badge badge-core"> ЯДРО</span>`;
-  if (ability.isCrossAbility) badgesHtml += `<span class="badge badge-cross">🔀 ПЕРЕКРЁСТНАЯ</span>`;
-  if (ability.aiTypes) { ability.aiTypes.forEach(t => { badgesHtml += `<span class="badge badge-${t}">${AI_NAMES[t]}</span>`; }); }
-  else { badgesHtml += `<span class="badge badge-${ability.aiType}">${AI_NAMES[ability.aiType]}</span>`; }
-  badgesHtml += `<span class="badge ${ability.type === 'active' ? 'badge-active' : 'badge-passive'}">${ability.type === 'active' ? 'АКТИВНАЯ' : 'ПАССИВНАЯ'}</span>`;
-  if (foreign) badgesHtml += `<span class="badge badge-foreign">ЧУЖЕРОДНАЯ</span>`;
-  if (!isUnlocked) badgesHtml += `<span class="badge badge-locked"> ЗАКРЫТА</span>`;
-  else if (currentLevel === 0) badgesHtml += `<span class="badge badge-inactive">⏸ НЕ АКТИВНА</span>`;
-  document.getElementById('panel-badges').innerHTML = badgesHtml;
-  
-  const reqBlock = document.getElementById('requirements-block');
-  const reqTitle = document.getElementById('req-title');
-  const reqList = document.getElementById('requirements-list');
-  
-  if (!isUnlocked) {
-    const reqs = getUnlockRequirements(abilityId);
-    toggleVisibility('requirements-block', true);
-    if (reqs.allMet) { reqBlock.classList.add('all-met'); reqTitle.textContent = '✅ Все требования выполнены'; }
-    else { reqBlock.classList.remove('all-met'); reqTitle.textContent = '🔒 Требования не выполнены'; }
-    reqList.innerHTML = reqs.items.map(r => `<div class="req-item ${r.met?'met':'unmet'}">${r.met?'✅':'❌'} ${r.text}</div>`).join('');
-  } else {
-    toggleVisibility('requirements-block', false);
-  }
-  
-  toggleVisibility('inactive-warning', isUnlocked && currentLevel === 0);
-  toggleVisibility('destab-warning', foreign && !isUnlocked && !ability.isCrossAbility);
-  toggleVisibility('cross-note', ability.isCrossAbility);
+  const isUnlocked=gameState.unlockedAbilities[abilityId];
+  const currentLevel=gameState.teraflops.allocation[abilityId]||0;
+  const prog=gameState.abilitiesProgress[abilityId]||{currentLevel:1,progress:0};
+  const foreign=isForeignToPlayer(ability);
+  const discount=hasDiscount(ability);
+  const freeFlops=gameState.teraflops.total-gameState.teraflops.used;
+  const branchColor=AI_COLORS[ability.aiType]||'#888888';
 
-  const isMaxed = prog.currentLevel >= ability.maxLevel;
-  document.getElementById('panel-current-level').textContent = currentLevel === 0 ? 'НЕ АКТИВНА (ур. 0)' : (isMaxed ? 'МАКСИМАЛЬНЫЙ УРОВЕНЬ' : `Уровень ${prog.currentLevel} из ${ability.maxLevel}`);
-  document.getElementById('panel-progress-percent').textContent = currentLevel === 0 ? '—' : (isMaxed ? '100%' : `${Math.floor(prog.progress)}%`);
-  const progressBar = document.getElementById('panel-progress-bar');
-  progressBar.style.width = currentLevel === 0 ? '0%' : (isMaxed ? '100%' : `${prog.progress}%`);
-  const levelHint = document.getElementById('panel-level-hint');
-  const underAllocated = currentLevel > 0 && currentLevel < prog.currentLevel;
-  if (!isMaxed && underAllocated) { progressBar.classList.add('frozen'); levelHint.classList.add('visible'); }
-  else { progressBar.classList.remove('frozen'); levelHint.classList.remove('visible'); }
+  document.getElementById('panel-icon').textContent = ability.icon || '🧠';
+  document.getElementById('panel-name').textContent=ability.name;
 
-  toggleVisibility('btn-accelerate', isUnlocked && currentLevel > 0 && !underAllocated && !isMaxed);
+  let badges='';
+  if(ability.isMain) badges+=`<span class="badge badge-core" data-tooltip="Главная способность ветки">⚛ ЯДРО</span>`;
+  if(ability.isCrossAbility) badges+=`<span class="badge badge-cross" data-tooltip="🔀 ПЕРЕКРЁСТНАЯ: Родная для обоих типов — без риска дестабилизации">🔀 ПЕРЕКРЁСТНАЯ</span>`;
+  if(ability.aiTypes) ability.aiTypes.forEach(t=>{ badges+=`<span class="badge badge-${t}">${AI_NAMES[t]}</span>`; });
+  else badges+=`<span class="badge badge-${ability.aiType}">${AI_NAMES[ability.aiType]}</span>`;
+  badges+=`<span class="badge ${ability.type==='active'?'badge-active':'badge-passive'}">${ability.type==='active'?'АКТИВНАЯ':'ПАССИВНАЯ'}</span>`;
+  if(foreign) badges+=`<span class="badge badge-foreign">ЧУЖЕРОДНАЯ</span>`;
+  if(!isUnlocked) badges+=`<span class="badge badge-locked">🔒 ЗАКРЫТА</span>`;
+  else if(currentLevel===0) badges+=`<span class="badge badge-inactive" data-tooltip="Распределите флопсы, чтобы активировать способность">⏸ НЕ АКТИВНА</span>`;
+  document.getElementById('panel-badges').innerHTML=badges;
 
-  toggleVisibility('resources-block', isUnlocked);
-  renderTfSlider(ability, isUnlocked, currentLevel, prog, discount);
-  document.getElementById('discount-note').style.display = discount ? 'block' : 'none';
+  document.getElementById('destab-warning').style.display=(foreign&&!isUnlocked&&!ability.isCrossAbility)?'block':'none';
+  document.getElementById('panel-effect-desc').textContent=ability.description;
 
-  document.getElementById('panel-effect-desc').textContent = ability.description;
-  let statsHtml = '';
-  if (ability.effects) {
-    const displayLevel = isUnlocked ? prog.currentLevel : 1;
-    for (let key in ability.effects) {
-      const eff = ability.effects[key];
-      const cur = calculateEffect(eff, displayLevel);
-      const isMax = displayLevel >= ability.maxLevel;
-      const next = isMax ? null : calculateEffect(eff, displayLevel + 1);
-      let vc = ''; if (eff.negative || cur < 0) vc = 'negative'; else if (eff.unit === '%') vc = 'percent';
-      statsHtml += `<div class="effect-row"><div class="effect-header"><span class="effect-label">${eff.icon} ${eff.label}</span><span class="effect-current ${vc}">${cur}${eff.unit}</span></div><div class="effect-formula"><span>База: ${eff.base}${eff.unit} + ${eff.perLevel}${eff.unit}/ур.</span>${isMax?`<span class="effect-maxed">✓ MAX</span>`:`<span class="effect-next">→ Lv.${displayLevel+1}: ${next}${eff.unit}</span>`}</div></div>`;
+  const learned=prog.currentLevel||0, isMaxed=learned>=ability.maxLevel;
+  document.getElementById('panel-level-value').textContent = isMaxed ? 'макс.' : `${learned}/${ability.maxLevel}`;
+  const pcn=document.getElementById('progress-container');
+  pcn.style.display = isMaxed ? 'none' : 'block';
+  const pb=document.getElementById('panel-progress-bar');
+  pb.style.width = isUnlocked ? `${prog.progress}%` : '0%';
+  const under=currentLevel>0&&currentLevel<learned;
+  pb.classList.toggle('frozen', under);
+  if(!isMaxed && under){ pcn.dataset.tooltip = `⚠️ Прокачка остановлена: выделите максимальный доступный уровень Lv.${learned}, чтобы продолжить.`; }
+  else { pcn.removeAttribute('data-tooltip'); }
+
+  const canAcc=isUnlocked&&currentLevel>0&&!under&&!isMaxed;
+  const acc=document.getElementById('btn-accelerate');
+  if(isMaxed){ acc.style.display='none'; }
+  else { acc.style.display=''; acc.disabled=!canAcc;
+    acc.innerHTML = !canAcc ? ( !isUnlocked ? 'Ускорить изучение<br>(сначала изучите)' : currentLevel===0 ? 'Ускорить изучение<br>(выделите TF)' : 'Ускорить изучение<br>(макс. уровень)' ) : 'Ускорить изучение<br>(1 очко обучения)'; }
+
+  const scale=document.getElementById('levels-scale-block');
+  const rows=document.getElementById('levels-rows');
+  if(isUnlocked){
+    scale.style.display='block';
+    let html='';
+    for(let i=ability.maxLevel;i>=1;i--){
+      const locked=i>learned, cur=i===currentLevel;
+      const cost=getAbilityCost(ability,i);
+      const base=Math.round(ability.baseCost*Math.pow(1.5,i-1));
+      const disc=discount&&base!==cost;
+      const extra=cost-getAbilityCost(ability,currentLevel);
+      const needfree = i>currentLevel && extra>freeFlops;
+      let ind='',card='';
+      if(locked){ ind='locked'; card='locked-card'; }
+      else if(cur){ ind='current'; card='active-card'; }
+      else card='normal-card';
+      let eff='';
+      for(let k in ability.effects){ const e=ability.effects[k], v=calculateEffect(e,i); let vc=''; if(e.negative||v<0) vc='negative'; else if(e.unit==='%') vc='percent';
+        eff+=`<div class="lc-effect"><span class="lc-effect-name">${e.icon} ${e.label}</span><span class="lc-effect-value ${vc}">${v}${e.unit}</span></div>`; }
+      const tip=disc?`Скидка 50%: ${base} → ${cost} TF (специализация ${AI_NAMES[ability.aiType]})`:`Стоимость: ${cost} TF`;
+      const activeStyle = cur ? `background:${hexToRgba(branchColor,0.16)}; border-color:${branchColor}; box-shadow:0 0 12px ${hexToRgba(branchColor,0.4)};` : '';
+      html+=`<div class="level-row">
+        <div class="level-cost-label ${needfree?'needfree':''}" data-tooltip="${tip}">${BOLT}${cost}</div>
+        <div class="level-indicator ${ind}" onclick="${locked?'':`changeAbilityLevel('${abilityId}', ${i})`}">${locked?'🔒':''}</div>
+        <div class="level-card ${card}" style="${activeStyle}" onclick="${locked?'':`changeAbilityLevel('${abilityId}', ${i})`}">
+          <div class="lc-left"><div class="lc-title">Lv.${i}</div></div>
+          <div class="lc-right">${eff}</div>
+        </div>
+      </div>`;
     }
-  }
-  document.getElementById('panel-stat-changes').innerHTML = statsHtml;
-  
-  toggleVisibility('panel-cooldown-box', ability.type === 'active' && isUnlocked && currentLevel > 0);
-  if (ability.type === 'active' && isUnlocked && currentLevel > 0) {
-    const onCd = gameState.cooldowns[abilityId] && Date.now() < gameState.cooldowns[abilityId];
-    document.getElementById('panel-cooldown-timer').textContent = onCd ? `${((gameState.cooldowns[abilityId]-Date.now())/1000).toFixed(1)}с` : 'Готово';
-    document.getElementById('panel-frozen-badge').classList.toggle('visible', prog.isFrozen);
-  }
-  
-  toggleVisibility('panel-use-btn', ability.type === 'active' && isUnlocked && currentLevel > 0);
-  if (ability.type === 'active' && isUnlocked && currentLevel > 0) {
-    const onCd = gameState.cooldowns[abilityId] && Date.now() < gameState.cooldowns[abilityId];
-    const useBtn = document.getElementById('panel-use-btn');
-    useBtn.disabled = onCd;
-    useBtn.textContent = onCd ? '⏳ Перезарядка...' : '🔹 Активировать';
-  }
-  
-  toggleVisibility('panel-unlock-btn', !isUnlocked);
-  if (!isUnlocked) {
-    const reqs = getUnlockRequirements(abilityId);
-    const unlockBtn = document.getElementById('panel-unlock-btn');
-    unlockBtn.disabled = !reqs.allMet;
-    unlockBtn.textContent = reqs.allMet ? '🔓 Изучить (1 очко)' : '🔒 Требования не выполнены';
-    unlockBtn.onclick = () => unlockCurrentAbility();
-  }
+    const offCur=currentLevel===0;
+    html+=`<div class="level-row">
+      <div class="level-cost-label" style="color:#e08888;" data-tooltip="Высвобождение всех Терафлопсов">Выкл</div>
+      <div class="level-indicator ${offCur?'off':''}" onclick="changeAbilityLevel('${abilityId}', 0)"></div>
+      <div class="level-card ${offCur?'off-card':''}" onclick="changeAbilityLevel('${abilityId}', 0)">
+        <div class="lc-right"><div class="lc-off-desc">Высвобождение всех флопсов и отключение активных эффектов способности</div></div>
+      </div>
+    </div>`;
+    rows.innerHTML=html;
+    requestAnimationFrame(fixScaleGeometry);
+  } else scale.style.display='none';
+
+  const reqBlock=document.getElementById('requirements-block');
+  if(!isUnlocked){ const r=getUnlockRequirements(abilityId); reqBlock.style.display='block';
+    document.getElementById('requirements-list').innerHTML=r.items.map(x=>`<li class="req-item ${x.met?'met':'unmet'}">${x.text}</li>`).join(''); }
+  else reqBlock.style.display='none';
+
+  const ub=document.getElementById('panel-unlock-btn');
+  if(!isUnlocked){ const r=getUnlockRequirements(abilityId); ub.style.display='block'; ub.disabled=!r.allMet; ub.textContent=r.allMet?'Изучить (1 очко обучения)':'Требования не выполнены'; }
+  else ub.style.display='none';
 }
+function closeAbilityPanel(){ document.getElementById('ability-panel').classList.remove('open'); currentOpenAbility=null; hideTooltip(); draw(); }
+function addNotification(t,type="info"){ const c=document.getElementById('notifications'); const n=document.createElement('div'); n.className=`notification ${type}`; n.textContent=t; c.appendChild(n); setTimeout(()=>n.remove(),4000); }
+function addPoints(){ gameState.learningPoints+=10; updateUI(); addNotification('+10 очков','success'); }
+function resetGame(){ location.reload(); }
 
-function closeAbilityPanel() { 
-  const panel = document.getElementById('ability-panel');
-  panel.classList.remove('open');
-  currentOpenAbility = null; 
-  draw();
-}
-function addNotification(t, type="info") { const c = document.getElementById('notifications'); const n = document.createElement('div'); n.className = `notification ${type}`; n.textContent = t; c.appendChild(n); setTimeout(() => n.remove(), 4000); }
-function addPoints() { gameState.learningPoints += 10; updateUI(); addNotification('+10 очков', 'success'); }
-function resetGame() { location.reload(); }
+const canvas=document.getElementById('tree-canvas'), ctx=canvas.getContext('2d'), container=document.getElementById('canvas-container');
+function resizeCanvas(){ canvas.width=container.clientWidth; canvas.height=container.clientHeight; panX=canvas.width/2; panY=canvas.height/2+60; draw(); requestAnimationFrame(fixScaleGeometry); }
+window.addEventListener('resize',resizeCanvas);
+// НОВОЕ: все ноды всегда видимы и кликабельны
+function getNodeAt(cx,cy){ const r=canvas.getBoundingClientRect(); const mx=(cx-r.left-panX)/zoom,my=(cy-r.top-panY)/zoom;
+  for(let t in ABILITIES_DATA) for(let k in ABILITIES_DATA[t]){ const a=ABILITIES_DATA[t][k]; const b=a._bounds; if(b&&mx>=b.x&&mx<=b.x+b.width&&my>=b.y&&my<=b.y+b.height) return a; } return null; }
 
-const canvas = document.getElementById('tree-canvas');
-const ctx = canvas.getContext('2d');
-const container = document.getElementById('canvas-container');
-
-function resizeCanvas() { canvas.width = container.clientWidth; canvas.height = container.clientHeight; panX = canvas.width / 2; panY = canvas.height / 2 + 60; draw(); }
-window.addEventListener('resize', resizeCanvas);
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.save(); ctx.translate(panX, panY); ctx.scale(zoom, zoom);
-
-  const allAbilities = [];
-  for (let type in ABILITIES_DATA) { for (let key in ABILITIES_DATA[type]) { allAbilities.push(ABILITIES_DATA[type][key]); } }
-
+function drawCorner(x,y,sym){
+  const s=26, cx=x+6, cy=y+6;
   ctx.save();
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 4]);
-  for (const ability of allAbilities) {
-    if (!ability.isMain) continue;
-    ctx.strokeStyle = hexToRgba(AI_COLORS[ability.aiType] || '#ffd700', 0.35);
-    ctx.beginPath();
-    ctx.moveTo(ability.x, ability.y - 60);
-    ctx.lineTo(ability.x, -100000);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
+  ctx.fillStyle='#111'; ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.roundRect(cx,cy,s,s,6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 16px "Segoe UI"'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(sym, cx+s/2, cy+s/2+1);
   ctx.restore();
+}
 
-  for (const ability of allAbilities) {
-    const branchColor = AI_COLORS[ability.aiType] || '#4488ff';
-    if (ability.parent) {
-      const parent = getAbility(ability.parent);
-      if (parent) {
-        if (ability.isCrossAbility) { ctx.strokeStyle = 'rgba(255,68,68,0.5)'; }
-        else { ctx.strokeStyle = hexToRgba(branchColor, 0.35); }
-        ctx.lineWidth = ability.isCrossAbility ? 2.5 : 2;
-        ctx.setLineDash(ability.isCrossAbility ? [6,4] : []);
-        ctx.beginPath(); ctx.moveTo(parent.x, parent.y); ctx.lineTo(ability.x, ability.y); ctx.stroke();
-        ctx.setLineDash([]);
-      }
-    }
-    if (ability.crossParent) {
-      const cp = getAbility(ability.crossParent);
-      if (cp) { ctx.strokeStyle = 'rgba(255,68,255,0.5)'; ctx.lineWidth = 2.5; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.moveTo(cp.x, cp.y); ctx.lineTo(ability.x, ability.y); ctx.stroke(); ctx.setLineDash([]); }
-    }
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save(); ctx.translate(panX,panY); ctx.scale(zoom,zoom);
+  const all=[]; for(let t in ABILITIES_DATA) for(let k in ABILITIES_DATA[t]) all.push(ABILITIES_DATA[t][k]);
+
+  ctx.save(); ctx.lineWidth=2; ctx.setLineDash([6,4]);
+  for(const a of all){ if(!a.isMain||a.aiType!==gameState.selectedType) continue; ctx.strokeStyle=hexToRgba(AI_COLORS[a.aiType]||'#ffd700',0.35); ctx.beginPath(); ctx.moveTo(a.x,a.y-60); ctx.lineTo(a.x,-100000); ctx.stroke(); }
+  ctx.setLineDash([]); ctx.restore();
+
+  // НОВОЕ: связи всегда рисуются; к заблокированным — приглушены
+  for(const a of all){
+    const childLocked = !gameState.unlockedAbilities[a.id] && !canUnlockAbility(a.id);
+    const la = childLocked ? 0.12 : 0.35;
+    const bc=AI_COLORS[a.aiType]||'#4488ff';
+    if(a.parent){ const p=getAbility(a.parent); if(p){ ctx.strokeStyle=a.isCrossAbility?`rgba(255,68,68,${la})`:hexToRgba(bc,la); ctx.lineWidth=a.isCrossAbility?2.5:2; ctx.setLineDash(a.isCrossAbility?[6,4]:[]); ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(a.x,a.y); ctx.stroke(); ctx.setLineDash([]); } }
+    if(a.crossParent){ const cp=getAbility(a.crossParent); if(cp){ ctx.strokeStyle=`rgba(255,68,255,${la})`; ctx.lineWidth=2.5; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.moveTo(cp.x,cp.y); ctx.lineTo(a.x,a.y); ctx.stroke(); ctx.setLineDash([]); } }
   }
 
-  for (const ability of allAbilities) {
-    const isUnlocked = gameState.unlockedAbilities[ability.id];
-    const isCore = ability.isMain;
-    const isCross = ability.isCrossAbility;
-    const canUnlock = canUnlockAbility(ability.id);
-    const allocLevel = gameState.teraflops.allocation[ability.id] || 0;
-    const learnedLevel = gameState.abilitiesProgress[ability.id]?.currentLevel || 0;
-    const branchColor = AI_COLORS[ability.aiType] || '#888888';
-    const width = isCore ? 200 : (isCross ? 180 : 160);
-    const height = isCore ? 120 : (isCross ? 100 : 90);
-    const x = ability.x - width/2, y = ability.y - height/2;
+  // НОВОЕ: все ноды всегда рисуются; заблокированные — серые, пунктир, замочек
+  for(const a of all){
+    const un=gameState.unlockedAbilities[a.id], isCore=a.isMain, isCross=a.isCrossAbility, cu=canUnlockAbility(a.id);
+    const fc=isCore&&a.aiType!==gameState.selectedType&&!un;
+    const locked = !un && !cu;
+    const al=gameState.teraflops.allocation[a.id]||0, ll=gameState.abilitiesProgress[a.id]?.currentLevel||0;
+    const bc=AI_COLORS[a.aiType]||'#888888';
+    const active = un && al>0;
+    const w = isCore?150:(isCross?130:120); const h=w;
+    const x=a.x-w/2, y=a.y-h/2;
 
-    let strokeColor, strokeWidth;
-    if (isCross) { strokeColor = '#ff44ff'; strokeWidth = 3; }
-    else if (!isUnlocked && !canUnlock) { strokeColor = '#444444'; strokeWidth = 1; }
-    else if (isUnlocked) { strokeColor = branchColor; strokeWidth = (isCore || allocLevel > 0) ? 3 : 2; }
-    else { strokeColor = branchColor; strokeWidth = 2; }
+    let sc,sw,da=false;
+    if(locked || fc){ sc='#666'; sw=2; da=true; }
+    else if(isCross){ sc='#ff44ff'; sw=active?3:2; }
+    else if(un){ sc=bc; sw=(active||isCore)?3:2; }
+    else { sc=bc; sw=2; }
 
-    if (isCore) {
-      const g = ctx.createLinearGradient(x,y,x+width,y+height);
-      g.addColorStop(0, hexToRgba(branchColor, 0.28));
-      g.addColorStop(1, hexToRgba(branchColor, 0.10));
-      ctx.fillStyle = g;
-    }
-    else if (isCross) { const g = ctx.createLinearGradient(x,y,x+width,y+height); g.addColorStop(0,'rgba(50,10,30,0.95)'); g.addColorStop(1,'rgba(30,5,40,0.95)'); ctx.fillStyle = g; }
-    else if (!isUnlocked && !canUnlock) ctx.fillStyle = 'rgba(20,20,30,0.7)';
-    else ctx.fillStyle = 'rgba(15,15,35,0.9)';
+    if(locked||fc) ctx.fillStyle='rgba(40,40,40,0.5)';
+    else if(isCore){ const g=ctx.createLinearGradient(x,y,x+w,y+h); g.addColorStop(0,hexToRgba(bc,0.28)); g.addColorStop(1,hexToRgba(bc,0.10)); ctx.fillStyle=g; }
+    else if(isCross){ const g=ctx.createLinearGradient(x,y,x+w,y+h); g.addColorStop(0,'rgba(50,10,30,0.95)'); g.addColorStop(1,'rgba(30,5,40,0.95)'); ctx.fillStyle=g; }
+    else ctx.fillStyle='rgba(15,15,35,0.9)';
 
-    ctx.strokeStyle = strokeColor; ctx.lineWidth = strokeWidth;
-    ctx.beginPath(); ctx.roundRect(x, y, width, height, 10); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle=sc; ctx.lineWidth=sw; ctx.setLineDash(da?[6,4]:[]);
+    ctx.beginPath(); ctx.roundRect(x,y,w,h,10); ctx.fill(); ctx.stroke();
+    ctx.setLineDash([]);
 
-    if (isCross) { ctx.strokeStyle = '#ff4444'; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x+3, y+3, width-6, height-6, 8); ctx.stroke(); }
+    if(isCross){ ctx.strokeStyle='#ff4444'; ctx.lineWidth=1; ctx.beginPath(); ctx.roundRect(x+3,y+3,w-6,h-6,8); ctx.stroke(); }
+    if(a.id===currentOpenAbility){ ctx.save(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.shadowColor='rgba(255,255,255,0.9)'; ctx.shadowBlur=10; ctx.beginPath(); ctx.roundRect(x-6,y-6,w+12,h+12,12); ctx.stroke(); ctx.restore(); }
 
-    if (ability.id === currentOpenAbility) {
-      ctx.save();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.shadowColor = 'rgba(255,255,255,0.9)';
-      ctx.shadowBlur = 10;
+    ctx.save();
+    ctx.globalAlpha = active ? 1 : 0.35;
+    ctx.font = `${isCore?56:44}px "Segoe UI"`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(a.icon||'❓', a.x, y+h*0.42);
+    ctx.restore();
+
+    const n=a.maxLevel, spacing=22, r=7;
+    const totalW=(n-1)*spacing;
+    for(let i=0;i<n;i++){
+      const lvl=i+1;
+      const cx=a.x-totalW/2 + i*spacing;
+      const cy=y+h-16;
       ctx.beginPath();
-      ctx.roundRect(x - 6, y - 6, width + 12, height + 12, 12);
-      ctx.stroke();
-      ctx.restore();
+      ctx.arc(cx,cy,r,0,Math.PI*2);
+      if(lvl<=al){ ctx.fillStyle=bc; ctx.fill(); }
+      else if(lvl<=ll){ ctx.strokeStyle=bc; ctx.lineWidth=3; ctx.stroke(); }
+      else { ctx.strokeStyle='#666'; ctx.lineWidth=2; ctx.stroke(); }
     }
 
-    if (!isUnlocked && !canUnlock) { ctx.fillStyle = 'rgba(100,100,100,0.8)'; ctx.font = 'bold 24px "Segoe UI"'; ctx.textAlign = 'center'; ctx.fillText('🔒', ability.x, y + height - 12); }
+    // НОВОЕ: замочек для заблокированных, + для доступных, ✓ для макс
+    if(locked) drawCorner(x,y,'🔒');
+    else if(!un && cu) drawCorner(x,y,'+');
+    else if(un && ll>=a.maxLevel) drawCorner(x,y,'✓');
 
-    if (isCore) {
-      const bw=90,bh=20,bx=ability.x-bw/2,by=y-bh/2-2;
-      ctx.fillStyle = branchColor;
-      ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,4); ctx.fill();
-      ctx.fillStyle = AI_BADGE_TEXT[ability.aiType] || '#000';
-      ctx.font='bold 11px "Segoe UI"'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(' ЯДРО',ability.x,by+bh/2);
-      ctx.textBaseline='alphabetic';
-    }
-    if (isCross) {
-      const bw=120,bh=18,bx=ability.x-bw/2,by=y-bh/2-2;
-      const g2=ctx.createLinearGradient(bx,by,bx+bw,by);
-      g2.addColorStop(0,'#ff4444'); g2.addColorStop(1,'#ffdd44');
-      ctx.fillStyle=g2;
-      ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,4); ctx.fill();
-      ctx.save();
-      ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=3;
-      ctx.fillStyle='#fff'; ctx.font='bold 10px "Segoe UI"'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('🔀 ПЕРЕКРЁСТНАЯ',ability.x,by+bh/2);
-      ctx.restore();
-      ctx.textBaseline='alphabetic';
-    }
-
-    ctx.fillStyle = (!isUnlocked&&!canUnlock) ? '#555' : (isCore ? branchColor : (isCross ? '#ff88ff' : '#fff'));
-    ctx.font = isCore ? 'bold 15px "Segoe UI"' : 'bold 13px "Segoe UI"';
-    ctx.textAlign = 'center';
-    ctx.fillText(ability.name, ability.x, y + (isCore?40:(isCross?35:25)));
-    
-    ctx.font = '12px "Courier New"';
-    if (isUnlocked && allocLevel === 0) {
-      ctx.fillStyle = '#ffdd44';
-      ctx.fillText(`⏸ НЕ АКТИВНА | ⚡0 TF`, ability.x, y + (isCore?60:(isCross?55:45)));
-    } else {
-      ctx.fillStyle = isCore ? hexToRgba(branchColor, 0.8) : '#aaa';
-      ctx.fillText(`Lv.${learnedLevel} | ⚡${getAbilityCost(ability, allocLevel)} TF`, ability.x, y + (isCore?60:(isCross?55:45)));
-    }
-
-    if (allocLevel > 0 && gameState.abilitiesProgress[ability.id]) {
-      const prog = gameState.abilitiesProgress[ability.id];
-      const barW = width-30, barH = 8, barX = ability.x-barW/2, barY = y+(isCore?75:(isCross?70:60));
-      ctx.fillStyle = '#333'; ctx.fillRect(barX, barY, barW, barH);
-      ctx.fillStyle = strokeColor;
-      ctx.fillRect(barX, barY, barW*(prog.progress/100), barH);
-    }
-    ability._bounds = { x, y, width, height };
+    a._bounds={x,y,width:w,height:h};
   }
   ctx.restore();
 }
 
-canvas.addEventListener('mousedown', e => { 
-  stopPanAnim();
-  const r=canvas.getBoundingClientRect(); const mx=(e.clientX-r.left-panX)/zoom, my=(e.clientY-r.top-panY)/zoom; 
-  let cl=null; 
-  for(let t in ABILITIES_DATA){for(let k in ABILITIES_DATA[t]){const b=ABILITIES_DATA[t][k]._bounds; if(b&&mx>=b.x&&mx<=b.x+b.width&&my>=b.y&&my<=b.y+b.height) cl=ABILITIES_DATA[t][k];}} 
-  if(cl) { openAbilityPanel(cl.id); focusOnAbility(cl); }
-  else { isDragging=true; lastMouseX=e.clientX; lastMouseY=e.clientY; } 
-});
-canvas.addEventListener('mousemove', e => { if(isDragging){panX+=e.clientX-lastMouseX;panY+=e.clientY-lastMouseY;lastMouseX=e.clientX;lastMouseY=e.clientY;draw();} });
-canvas.addEventListener('mouseup', () => isDragging=false);
-canvas.addEventListener('wheel', e => { e.preventDefault(); stopPanAnim(); zoom=Math.max(0.5,Math.min(2,zoom*(e.deltaY<0?1.1:0.9))); draw(); });
-
+canvas.addEventListener('mousedown',e=>{ stopPanAnim(); const n=getNodeAt(e.clientX,e.clientY);
+  if(n){ if(n.isMain&&n.aiType!==gameState.selectedType){ addNotification(`Уже выбран ${AI_NAMES[gameState.selectedType]} ИИ`,'warning'); return; } gameState.seenAbilities.add(n.id); openAbilityPanel(n.id); focusOnAbility(n); }
+  else { isDragging=true; lastMouseX=e.clientX; lastMouseY=e.clientY; canvas.style.cursor='grabbing'; } });
+canvas.addEventListener('mousemove',e=>{
+  if(isDragging){ panX+=e.clientX-lastMouseX; panY+=e.clientY-lastMouseY; lastMouseX=e.clientX; lastMouseY=e.clientY; draw(); }
+  else { const n=getNodeAt(e.clientX,e.clientY);
+    if(n){ showTooltip(nodeTip(n), e.clientX, e.clientY); canvas.style.cursor = (n.isMain&&n.aiType!==gameState.selectedType)?'not-allowed':'pointer'; }
+    else { hideTooltip(); canvas.style.cursor='grab'; } } });
+canvas.addEventListener('mouseup',()=>{ isDragging=false; canvas.style.cursor='grab'; });
+canvas.addEventListener('mouseleave',()=>{ hideTooltip(); });
+canvas.addEventListener('wheel',e => { e.preventDefault(); stopPanAnim(); zoom=Math.max(0.5,Math.min(2,zoom*(e.deltaY<0?1.1:0.9))); draw(); });
 resizeCanvas();
 </script>
 </body>
