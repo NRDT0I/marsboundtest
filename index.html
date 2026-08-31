@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Древо ИИ v9.18</title>
+<title>Древо ИИ v9.21</title>
 <style>
   :root {
     --bg-color:#0a0a1a; --panel-bg:rgba(20,20,35,0.97);
@@ -93,7 +93,7 @@
 </head>
 <body>
   <div id="header">
-    <div class="hdr-title">🧠 Древо ИИ v9.18</div>
+    <div class="hdr-title">🧠 Древо ИИ v9.21</div>
     <div id="header-resources">
       <div class="hr-block">
         <div class="hr-label">Терафлопсы</div>
@@ -173,8 +173,8 @@ const ABILITIES_DATA={
   }
 };
 let gameState={selectedType:null,learningPoints:14,pointsSpent:0,teraflops:{total:TF_LIMIT,used:0,allocation:{}},abilitiesProgress:{},unlockedAbilities:{},seenAbilities:new Set(),lastAlloc:{}};
-let currentOpenAbility=null,panX=0,panY=0,zoom=0.85,isDragging=false,lastMouseX=0,lastMouseY=0,panAnim=null;
-let impulses=[],impulseRAF=null,lastImpulseTime=0;
+let currentOpenAbility=null,hoverAbilityId=null,panX=0,panY=0,zoom=0.85,isDragging=false,lastMouseX=0,lastMouseY=0;
+let impulses=[],lastFrame=performance.now();
 function getAbility(id){for(let t in ABILITIES_DATA)for(let k in ABILITIES_DATA[t])if(ABILITIES_DATA[t][k].id===id)return ABILITIES_DATA[t][k];return null;}
 function findCrossBetween(t1,t2){for(let t in ABILITIES_DATA)for(let k in ABILITIES_DATA[t]){const a=ABILITIES_DATA[t][k];if(a.isCrossAbility&&a.aiTypes?.includes(t1)&&a.aiTypes?.includes(t2))return a;}return null;}
 function isDescendant(node,ancestorId){let cur=node;while(cur&&cur.parent){if(cur.parent===ancestorId)return true;cur=getAbility(cur.parent);}return false;}
@@ -195,32 +195,41 @@ function updateTeraflopsUsed(){let t=0;for(let id in gameState.teraflops.allocat
 function spendPoints(n){gameState.learningPoints-=n;gameState.pointsSpent+=n;}
 function gainProgress(id,amount){const a=getAbility(id),p=gameState.abilitiesProgress[id];if(!a||!p||p.currentLevel>=a.maxLevel)return false;p.progress+=amount;if(p.progress>=100){p.currentLevel++;p.progress=0;addNotification(`🆙 ${a.name} → Ур.${p.currentLevel}!`,"success");const curAlloc=gameState.teraflops.allocation[id]||0;if(p.currentLevel>curAlloc){const diff=getAbilityCost(a,p.currentLevel)-getAbilityCost(a,curAlloc);if(gameState.teraflops.used+diff<=gameState.teraflops.total){gameState.teraflops.allocation[id]=p.currentLevel;updateTeraflopsUsed();addNotification(`⚡ Автоназначение: уровень ${p.currentLevel}.`,"success");}}return true;}return false;}
 function parentLevelInfo(p){return{unlocked:gameState.unlockedAbilities[p.id]||false,level:gameState.abilitiesProgress[p.id]?.currentLevel||0};}
+function unlockProgressOf(a){
+  if(!a.parent)return 0;
+  const p=getAbility(a.parent);if(!p)return 0;
+  const pi=gameState.abilitiesProgress[p.id];
+  const pLevel=pi?pi.currentLevel:0;const pProg=pi?pi.progress:0;
+  const req=a.requiredMainLevel||1;
+  return Math.max(0,Math.min(1,(pLevel+pProg/100)/req));
+}
+// НОВОЕ: требования с флагом isPoints, чтобы отделять "не хватает очков" от "не тот уровень"
 function getUnlockRequirements(abilityId){
   const a=getAbility(abilityId),req=[];
   if(gameState.unlockedAbilities[abilityId])return{allMet:true,items:[]};
-  if(a.isMain&&a.aiType!==gameState.selectedType){req.push({text:`${a.unlockCost} очко развития`,met:gameState.learningPoints>=a.unlockCost});req.push({text:`Ядро "${a.name}" нельзя изучить: тип ИИ уже выбран (${AI_NAMES[gameState.selectedType]})`,met:false});return{allMet:false,items:req};}
-  req.push({text:`${a.unlockCost} очко развития (у вас: ${gameState.learningPoints})`,met:gameState.learningPoints>=a.unlockCost});
-  if(a.isCrossAbility){const p1=getAbility(a.parent),p2=a.crossParent?getAbility(a.crossParent):null;const i1=parentLevelInfo(p1),i2=p2?parentLevelInfo(p2):{unlocked:false,level:0};req.push({text:`Изучена "${p1.name}" (≥2 ур.) ИЛИ "${p2?.name||'?'}" (≥2 ур.)`,met:(i1.unlocked&&i1.level>=2)||(i2.unlocked&&i2.level>=2)});}
+  if(a.isMain&&a.aiType!==gameState.selectedType){req.push({text:`${a.unlockCost} очко развития`,met:gameState.learningPoints>=a.unlockCost,isPoints:true});req.push({text:`Ядро "${a.name}" нельзя изучить: тип ИИ уже выбран (${AI_NAMES[gameState.selectedType]})`,met:false,isPoints:false});return{allMet:false,items:req};}
+  req.push({text:`${a.unlockCost} очко развития (у вас: ${gameState.learningPoints})`,met:gameState.learningPoints>=a.unlockCost,isPoints:true});
+  if(a.isCrossAbility){const p1=getAbility(a.parent),p2=a.crossParent?getAbility(a.crossParent):null;const i1=parentLevelInfo(p1),i2=p2?parentLevelInfo(p2):{unlocked:false,level:0};req.push({text:`Изучена "${p1.name}" (≥2 ур.) ИЛИ "${p2?.name||'?'}" (≥2 ур.)`,met:(i1.unlocked&&i1.level>=2)||(i2.unlocked&&i2.level>=2),isPoints:false});}
   else if(a.parent){const p=getAbility(a.parent),pi=parentLevelInfo(p);
-    // ВОССТАНОВЛЕНО: чужое ядро как родитель — открывается через перекрёстную (Подопытные Ур.1)
     if(p.isMain&&p.aiType!==gameState.selectedType){
       const c=findCrossBetween(gameState.selectedType,p.aiType);
       const isEntry=c&&(c.parent===a.id||c.crossParent===a.id);
-      if(c&&isEntry){
-        const crossUnlocked=gameState.unlockedAbilities[c.id]||false;
-        req.push({text:`Изучена "${c.name}" (Ур.1) ИЛИ "${p.name}" (${a.requiredMainLevel} ур.)`,met:crossUnlocked});
-      }else{
-        req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel} ур.)`,met:false});
-      }
+      if(c&&isEntry){const cu=gameState.unlockedAbilities[c.id]||false;req.push({text:`Изучена "${c.name}" (Ур.1) ИЛИ "${p.name}" (${a.requiredMainLevel} ур.)`,met:cu,isPoints:false});}
+      else req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel} ур.)`,met:false,isPoints:false});
     }
-    else if(!pi.unlocked||pi.level<(a.requiredMainLevel||1))req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel||1} ур., сейчас: ${pi.level})`,met:false});
-    else req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel||1} ур.)`,met:true});}
+    else if(!pi.unlocked||pi.level<(a.requiredMainLevel||1))req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel||1} ур., сейчас: ${pi.level})`,met:false,isPoints:false});
+    else req.push({text:`Изучена "${p.name}" (${a.requiredMainLevel||1} ур.)`,met:true,isPoints:false});}
   return{allMet:req.every(r=>r.met),items:req};
+}
+function reqFlags(abilityId){
+  const r=getUnlockRequirements(abilityId);
+  const levelMet=r.items.filter(x=>!x.isPoints).every(x=>x.met);
+  const pointsMet=r.items.filter(x=>x.isPoints).every(x=>x.met);
+  return{allMet:r.allMet,levelMet,pointsMet};
 }
 function canUnlockAbility(id){return getUnlockRequirements(id).allMet;}
 function focusOnAbility(a){const w=canvas.width-520;animatePan(w/2-a.x*zoom,canvas.height/2-a.y*zoom,400);}
-function animatePan(toX,toY,d){const fx=panX,fy=panY,s=performance.now();if(panAnim)cancelAnimationFrame(panAnim);function step(n){const t=Math.min(1,(n-s)/d),e=1-Math.pow(1-t,3);panX=fx+(toX-fx)*e;panY=fy+(toY-fy)*e;draw();panAnim=t<1?requestAnimationFrame(step):null;}panAnim=requestAnimationFrame(step);}
-function stopPanAnim(){if(panAnim){cancelAnimationFrame(panAnim);panAnim=null;}}
+function animatePan(toX,toY,d){const fx=panX,fy=panY,s=performance.now();let raf;function step(n){const t=Math.min(1,(n-s)/d),e=1-Math.pow(1-t,3);panX=fx+(toX-fx)*e;panY=fy+(toY-fy)*e;draw();if(t<1)raf=requestAnimationFrame(step);}raf=requestAnimationFrame(step);}
 function buildPathTo(targetId){
   const coreId=Object.values(ABILITIES_DATA[gameState.selectedType])[0].id;
   const adj={};const addE=(a,b)=>{(adj[a]=adj[a]||[]).push(b);(adj[b]=adj[b]||[]).push(a);};
@@ -232,9 +241,8 @@ function buildPathTo(targetId){
   const pts=[{x:hx,y:hy},{x:hx,y:hyLine},{x:core.x,y:hyLine},{x:core.x,y:core.y}];
   for(let i=1;i<chain.length;i++){const n=getAbility(chain[i]);pts.push({x:n.x,y:n.y});}return pts;
 }
-function spawnImpulse(targetId,color){const path=buildPathTo(targetId);if(path.length<2)return;const segs=[];let total=0;for(let i=0;i<path.length-1;i++){const a=path[i],b=path[i+1];const len=Math.hypot(b.x-a.x,b.y-a.y);segs.push(len);total+=len;}impulses.push({path,segs,total,color,dist:0,speed:1500});if(!impulseRAF){lastImpulseTime=performance.now();impulseRAF=requestAnimationFrame(impulseStep);}}
+function spawnImpulse(targetId,color){const path=buildPathTo(targetId);if(path.length<2)return;const segs=[];let total=0;for(let i=0;i<path.length-1;i++){const a=path[i],b=path[i+1];const len=Math.hypot(b.x-a.x,b.y-a.y);segs.push(len);total+=len;}impulses.push({path,segs,total,color,dist:0,speed:1500});}
 function impulsePos(imp){let d=imp.dist;for(let i=0;i<imp.segs.length;i++){const len=imp.segs[i];if(d<=len){const a=imp.path[i],b=imp.path[i+1];const k=len?d/len:0;return{x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k};}d-=len;}const l=imp.path[imp.path.length-1];return{x:l.x,y:l.y};}
-function impulseStep(now){const dt=(now-lastImpulseTime)/1000;lastImpulseTime=now;for(const imp of impulses)imp.dist+=imp.speed*dt;impulses=impulses.filter(imp=>imp.dist<imp.total);draw();if(impulses.length)impulseRAF=requestAnimationFrame(impulseStep);else impulseRAF=null;}
 function flashPoints(){const el=document.getElementById('hud-points-text');el.classList.remove('pulse');void el.offsetWidth;el.classList.add('pulse');}
 function toggleAbilityEnabled(on){const id=currentOpenAbility;if(!id)return;if(on){const target=gameState.lastAlloc[id]||1;if(!trySetLevel(id,target))trySetLevel(id,1);}else{const cur=gameState.teraflops.allocation[id]||0;if(cur>0)gameState.lastAlloc[id]=cur;changeAbilityLevel(id,0);}}
 function trySetLevel(id,lvl){const a=getAbility(id),p=gameState.abilitiesProgress[id];if(!p)return false;if(lvl>p.currentLevel)lvl=p.currentLevel;if(lvl<0)lvl=0;const old=gameState.teraflops.allocation[id]||0;if(lvl===old)return true;const diff=getAbilityCost(a,lvl)-getAbilityCost(a,old);if(gameState.teraflops.used+diff>gameState.teraflops.total)return false;gameState.teraflops.allocation[id]=lvl;updateTeraflopsUsed();updateUI();draw();return true;}
@@ -243,15 +251,26 @@ setTimeout(()=>{if(!gameState.selectedType)selectAIType('amoral');},500);
 function changeAbilityLevel(id,newLevel){const a=getAbility(id);if(!gameState.unlockedAbilities[id])return;const p=gameState.abilitiesProgress[id];if(newLevel>0&&p&&newLevel>p.currentLevel){addNotification(`❌ Уровень ${newLevel} не открыт!`,"error");return;}const old=gameState.teraflops.allocation[id]||0;if(newLevel===old)return;const diff=getAbilityCost(a,newLevel)-getAbilityCost(a,old);if(gameState.teraflops.used+diff>gameState.teraflops.total){addNotification('❌ Недостаточно TF!',"error");return;}gameState.teraflops.allocation[id]=newLevel;updateTeraflopsUsed();updateUI();draw();}
 function unlockCurrentAbility(){if(!currentOpenAbility||!canUnlockAbility(currentOpenAbility))return;const a=getAbility(currentOpenAbility);spendPoints(a.unlockCost);gameState.unlockedAbilities[currentOpenAbility]=true;gameState.abilitiesProgress[currentOpenAbility]={currentLevel:1,progress:0};gameState.seenAbilities.add(currentOpenAbility);const c1=getAbilityCost(a,1);if(gameState.teraflops.used+c1<=gameState.teraflops.total){gameState.teraflops.allocation[currentOpenAbility]=1;updateTeraflopsUsed();}else{gameState.teraflops.allocation[currentOpenAbility]=0;}addNotification(`✅ Изучено: ${a.name}`,"success");flashPoints();spawnImpulse(currentOpenAbility,AI_COLORS[a.aiType]||'#ffdd44');updateUI();draw();}
 function accelerateProgress(){if(!currentOpenAbility||gameState.learningPoints<1)return;const p=gameState.abilitiesProgress[currentOpenAbility],a=getAbility(currentOpenAbility);if(!p||p.currentLevel>=a.maxLevel)return;spendPoints(1);gainProgress(currentOpenAbility,25);addNotification(`⚡ Ускорено! Прогресс: ${Math.floor(p.progress)}%`,"success");flashPoints();spawnImpulse(currentOpenAbility,AI_COLORS[a.aiType]||'#ffdd44');updateUI();draw();}
-function startProgressTimer(){setInterval(()=>{for(let id in gameState.teraflops.allocation){const l=gameState.teraflops.allocation[id];if(l===0)continue;const a=getAbility(id),p=gameState.abilitiesProgress[id];if(!p||p.currentLevel>=a.maxLevel)continue;if(l<p.currentLevel)continue;gainProgress(id,l);}updateUI();draw();},1000);}
-function updateUI(){const av=gameState.teraflops.total-gameState.teraflops.used;document.getElementById('hud-tf-text').textContent=`${av}/${gameState.teraflops.total}`;document.getElementById('hud-bar-fill').style.width=`${(av/gameState.teraflops.total)*100}%`;document.getElementById('hud-points-text').textContent=gameState.learningPoints;document.getElementById('hud-points-spent').textContent=gameState.pointsSpent;const t=document.getElementById('header-type');t.textContent=gameState.selectedType?AI_NAMES[gameState.selectedType]:'Не выбран';t.style.color=gameState.selectedType?(AI_COLORS[gameState.selectedType]||'var(--neon-yellow)'):'var(--neon-yellow)';if(currentOpenAbility)openAbilityPanel(currentOpenAbility);}
+function startProgressTimer(){setInterval(()=>{for(let id in gameState.teraflops.allocation){const l=gameState.teraflops.allocation[id];if(l===0)continue;const a=getAbility(id),p=gameState.abilitiesProgress[id];if(!p||p.currentLevel>=a.maxLevel)continue;if(l<p.currentLevel)continue;gainProgress(id,l);}updateUI();},1000);}
+function updateUI(){const av=gameState.teraflops.total-gameState.teraflops.used;document.getElementById('hud-tf-text').textContent=`${av}/${gameState.teraflops.total}`;document.getElementById('hud-bar-fill').style.width=`${(av/gameState.teraflops.total)*100}%`;document.getElementById('hud-points-text').textContent=gameState.learningPoints;document.getElementById('hud-points-spent').textContent=gameState.pointsSpent;const t=document.getElementById('header-type');t.textContent=gameState.selectedType?AI_NAMES[gameState.selectedType]:'Не выбран';t.style.color=gameState.selectedType?(AI_COLORS[gameState.selectedType]||'var(--neon-yellow)'):'var(--neon-yellow)';if(currentOpenAbility&&!sliderDragging)openAbilityPanel(currentOpenAbility);}
 const tooltipEl=document.getElementById('custom-tooltip');
 function showTooltip(t,x,y){tooltipEl.textContent=t;tooltipEl.style.left=(x+10)+'px';tooltipEl.style.top=(y-10)+'px';tooltipEl.classList.add('visible');}
 function hideTooltip(){tooltipEl.classList.remove('visible');}
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-tooltip]');if(t)showTooltip(t.dataset.tooltip,e.clientX,e.clientY);});
 document.addEventListener('mouseout',e=>{const t=e.target.closest('[data-tooltip]');if(t)hideTooltip();});
 document.addEventListener('keydown',e=>{if(e.key==='+'||(e.shiftKey&&e.code==='Equal')){e.preventDefault();gameState.learningPoints+=10;updateUI();addNotification('+10 очков развития (dev)','success');}});
-function nodeTip(a){const un=gameState.unlockedAbilities[a.id];const al=gameState.teraflops.allocation[a.id]||0;const ll=gameState.abilitiesProgress[a.id]?.currentLevel||0;if(a.isMain&&a.aiType!==gameState.selectedType)return`${a.icon} ${a.name} — Инициализирован ${AI_NAMES[gameState.selectedType]} ИИ`;if(!un&&!canUnlockAbility(a.id))return`${a.icon} ${a.name} — заблокировано`;if(!un)return`${a.icon} ${a.name} — можно изучить`;if(ll>=a.maxLevel)return`${a.icon} ${a.name} — макс. уровень`;if(al===0)return`${a.icon} ${a.name} — нет флопсов`;return`${a.icon} ${a.name} — Ур.${al}`;}
+function nodeTip(a){const un=gameState.unlockedAbilities[a.id];const al=gameState.teraflops.allocation[a.id]||0;const ll=gameState.abilitiesProgress[a.id]?.currentLevel||0;
+  if(a.isMain&&a.aiType!==gameState.selectedType)return`${a.icon} ${a.name} — Инициализирован ${AI_NAMES[gameState.selectedType]} ИИ`;
+  if(!un){const f=reqFlags(a.id);if(f.levelMet&&!f.pointsMet)return`${a.icon} ${a.name} — можно изучить, не хватает очков`;if(f.levelMet)return`${a.icon} ${a.name} — можно изучить`;return`${a.icon} ${a.name} — разблокируется с Ур.${a.requiredMainLevel} родителя`;}
+  if(ll>=a.maxLevel)return`${a.icon} ${a.name} — макс. уровень`;
+  if(al===0)return`${a.icon} ${a.name} — нет флопсов`;
+  return`${a.icon} ${a.name} — Ур.${al}`;}
+function getHighlightedTypes(){
+  const set=new Set();
+  const src=hoverAbilityId?getAbility(hoverAbilityId):(currentOpenAbility?getAbility(currentOpenAbility):null);
+  if(src){ if(src.aiTypes)src.aiTypes.forEach(t=>set.add(t)); else set.add(src.aiType); }
+  return set;
+}
 function fixScaleGeometry(){
   const block=document.getElementById('levels-scale-block');
   if(!block||block.style.display==='none')return;
@@ -263,27 +282,25 @@ function fixScaleGeometry(){
   const indicators=[...rowsEl.querySelectorAll('.level-indicator')];
   if(indicators.length<1)return;
   const scaleRect=scaleEl.getBoundingClientRect();
-  const firstInd=indicators[0];
-  const lastInd=indicators[indicators.length-1];
-  const firstRect=firstInd.getBoundingClientRect();
-  const lastRect=lastInd.getBoundingClientRect();
+  const firstRect=indicators[0].getBoundingClientRect();
+  const lastRect=indicators[indicators.length-1].getBoundingClientRect();
   const topY=firstRect.top+firstRect.height/2-scaleRect.top;
   const botY=lastRect.top+lastRect.height/2-scaleRect.top;
-  track.style.top=topY+'px';
-  track.style.height=Math.max(0,botY-topY)+'px';
-  track.style.bottom='auto';
-  const a=getAbility(currentOpenAbility);
-  const max=a?a.maxLevel:1;
-  const cur=gameState.teraflops.allocation[currentOpenAbility]||0;
+  track.style.top=topY+'px';track.style.height=Math.max(0,botY-topY)+'px';track.style.bottom='auto';
+  const a=getAbility(currentOpenAbility);const max=a?a.maxLevel:1;const cur=gameState.teraflops.allocation[currentOpenAbility]||0;
   if(cur<=0||indicators.length<2){fill.style.height='0px';return;}
-  const curIdx=max-cur;
-  if(curIdx>=indicators.length){fill.style.height='0px';return;}
-  const curInd=indicators[curIdx];
-  const curRect=curInd.getBoundingClientRect();
+  const curIdx=max-cur;if(curIdx>=indicators.length){fill.style.height='0px';return;}
+  const curRect=indicators[curIdx].getBoundingClientRect();
   const curY=curRect.top+curRect.height/2-scaleRect.top;
-  const fillH=Math.max(0,botY-curY);
-  fill.style.height=fillH+'px';
+  fill.style.height=Math.max(0,botY-curY)+'px';
 }
+let sliderDragging=false;
+(function(){const hs=document.getElementById('hslider');if(!hs)return;
+  hs.addEventListener('pointerdown',e=>{sliderDragging=true;hs.setPointerCapture(e.pointerId);hset(e);});
+  hs.addEventListener('pointermove',e=>{if(sliderDragging)hset(e);});
+  hs.addEventListener('pointerup',()=>{sliderDragging=false;});
+  function hset(e){if(!currentOpenAbility)return;const a=getAbility(currentOpenAbility);const r=hs.getBoundingClientRect();const ratio=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));changeAbilityLevel(currentOpenAbility,Math.round(ratio*a.maxLevel));}
+})();
 function openAbilityPanel(abilityId){currentOpenAbility=abilityId;const ability=getAbility(abilityId);const panel=document.getElementById('ability-panel');panel.classList.add('open');panel.classList.remove('core-panel','cross-panel');if(ability.isCrossAbility){panel.classList.add('cross-panel');panel.style.borderColor='';}else{panel.style.borderColor=AI_COLORS[ability.aiType]||'var(--neon-blue)';if(ability.isMain)panel.classList.add('core-panel');}
   const isUnlocked=gameState.unlockedAbilities[abilityId];const currentLevel=gameState.teraflops.allocation[abilityId]||0;const prog=gameState.abilitiesProgress[abilityId]||{currentLevel:1,progress:0};const foreign=isForeignToPlayer(ability);const discount=hasDiscount(ability);const freeFlops=gameState.teraflops.total-gameState.teraflops.used;const branchColor=AI_COLORS[ability.aiType]||'#888888';
   document.getElementById('panel-icon').textContent=ability.icon||'🧠';document.getElementById('panel-name').textContent=ability.name;
@@ -308,7 +325,13 @@ function openAbilityPanel(abilityId){currentOpenAbility=abilityId;const ability=
   const reqBlock=document.getElementById('requirements-block');
   if(!isUnlocked){const r=getUnlockRequirements(abilityId);reqBlock.style.display='block';document.getElementById('requirements-list').innerHTML=r.items.map(x=>`<li class="req-item ${x.met?'met':'unmet'}">${x.text}</li>`).join('');}else reqBlock.style.display='none';
   const ub=document.getElementById('panel-unlock-btn');
-  if(!isUnlocked){const r=getUnlockRequirements(abilityId);ub.style.display='block';ub.disabled=!r.allMet;ub.textContent=r.allMet?'Изучить (1 очко развития)':'Требования не выполнены';}else ub.style.display='none';}
+  if(!isUnlocked){
+    const f=reqFlags(abilityId);
+    ub.style.display='block';
+    ub.disabled=!f.allMet;
+    // НОВОЕ: текст кнопки зависит от того, чего не хватает
+    ub.textContent = f.allMet ? 'Изучить (1 очко развития)' : (f.levelMet ? 'Недостаточно очков развития' : 'Требования не выполнены');
+  } else ub.style.display='none';}
 function closeAbilityPanel(){document.getElementById('ability-panel').classList.remove('open');currentOpenAbility=null;hideTooltip();draw();}
 function addNotification(t,type="info"){const c=document.getElementById('notifications');const n=document.createElement('div');n.className=`notification ${type}`;n.textContent=t;c.appendChild(n);setTimeout(()=>n.remove(),4000);}
 function resetGame(){location.reload();}
@@ -319,43 +342,72 @@ function getNodeAt(cx,cy){const r=canvas.getBoundingClientRect();const mx=(cx-r.
 function drawCorner(x,y,sym){const s=26,cx=x+6,cy=y+6;ctx.save();ctx.fillStyle='#111';ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(cx,cy,s,s,6);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 16px "Segoe UI"';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(sym,cx+s/2,cy+s/2+1);ctx.restore();}
 function drawRegionsScreen(){
   const types=[];for(const t in AI_NAMES){if(t===gameState.selectedType){types.push(t);continue;}const cross=findCrossBetween(gameState.selectedType,t);if(cross&&gameState.unlockedAbilities[cross.id])types.push(t);}
-  if(!types.length)return;const centers={};for(const t of types){let sum=0,cnt=0;for(let k in ABILITIES_DATA[t]){sum+=ABILITIES_DATA[t][k].x;cnt++;}centers[t]=cnt?sum/cnt:0;}types.sort((a,b)=>centers[a]-centers[b]);const toSX=wx=>wx*zoom+panX;const edges=[0];for(let i=0;i<types.length-1;i++)edges.push(toSX((centers[types[i]]+centers[types[i+1]])/2));edges.push(canvas.width);
-  for(let i=0;i<types.length;i++){const t=types[i],l=edges[i],r=edges[i+1];ctx.fillStyle=hexToRgba(AI_COLORS[t]||'#888',0.05);ctx.fillRect(l,0,r-l,canvas.height);if(i<types.length-1){ctx.strokeStyle=hexToRgba(AI_COLORS[types[i+1]]||'#888',0.4);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(r,canvas.height);ctx.stroke();}ctx.fillStyle=hexToRgba(AI_COLORS[t]||'#888',0.5);ctx.font='bold 26px "Segoe UI"';ctx.textAlign='center';ctx.fillText(AI_NAMES[t]+' ИИ',(l+r)/2,44);}
+  if(!types.length)return;
+  const hl=getHighlightedTypes();
+  const centers={};for(const t of types){let sum=0,cnt=0;for(let k in ABILITIES_DATA[t]){sum+=ABILITIES_DATA[t][k].x;cnt++;}centers[t]=cnt?sum/cnt:0;}types.sort((a,b)=>centers[a]-centers[b]);const toSX=wx=>wx*zoom+panX;const edges=[0];for(let i=0;i<types.length-1;i++)edges.push(toSX((centers[types[i]]+centers[types[i+1]])/2));edges.push(canvas.width);
+  for(let i=0;i<types.length;i++){
+    const t=types[i],l=edges[i],r=edges[i+1];const active=hl.has(t);
+    ctx.fillStyle=hexToRgba(AI_COLORS[t]||'#888',active?0.12:0.05);ctx.fillRect(l,0,r-l,canvas.height);
+    if(i<types.length-1){ctx.strokeStyle=hexToRgba(AI_COLORS[types[i+1]]||'#888',active?0.7:0.4);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(r,canvas.height);ctx.stroke();}
+    ctx.fillStyle=hexToRgba(AI_COLORS[t]||'#888',active?0.9:0.5);ctx.font=(active?'bold ':'')+'26px "Segoe UI"';ctx.textAlign='center';ctx.fillText(AI_NAMES[t]+' ИИ',(l+r)/2,44);
+  }
 }
-function draw(){
+function draw(now){
+  now=now||performance.now();
+  const pulse=(Math.sin(now/250)+1)/2;
   ctx.clearRect(0,0,canvas.width,canvas.height);drawRegionsScreen();
   ctx.save();ctx.translate(panX,panY);ctx.scale(zoom,zoom);
   const all=[];for(let t in ABILITIES_DATA)for(let k in ABILITIES_DATA[t])all.push(ABILITIES_DATA[t][k]);
   const hx=(canvas.width/2-panX)/zoom,hy=(0-panY)/zoom;
   ctx.save();ctx.lineWidth=2;ctx.setLineDash([6,4]);for(const a of all){if(!a.isMain||a.aiType!==gameState.selectedType)continue;ctx.strokeStyle=hexToRgba(AI_COLORS[a.aiType]||'#ffd700',0.5);const hyLine=hy+8;ctx.beginPath();ctx.moveTo(a.x,a.y-60);ctx.lineTo(a.x,hyLine);ctx.lineTo(hx,hyLine);ctx.lineTo(hx,hy);ctx.stroke();}ctx.setLineDash([]);ctx.restore();
-  for(const a of all){if(!isNodeVisible(a))continue;const childLocked=!gameState.unlockedAbilities[a.id]&&!canUnlockAbility(a.id);const la=childLocked?0.12:0.35;const bc=AI_COLORS[a.aiType]||'#4488ff';if(a.parent){const p=getAbility(a.parent);if(p&&isNodeVisible(p)){ctx.strokeStyle=a.isCrossAbility?`rgba(255,68,68,${la})`:hexToRgba(bc,la);ctx.lineWidth=a.isCrossAbility?2.5:2;ctx.setLineDash(a.isCrossAbility?[6,4]:[]);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(a.x,a.y);ctx.stroke();ctx.setLineDash([]);}}if(a.crossParent){const cp=getAbility(a.crossParent);if(cp&&isNodeVisible(cp)){ctx.strokeStyle=`rgba(255,68,255,${la})`;ctx.lineWidth=2.5;ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(a.x,a.y);ctx.stroke();ctx.setLineDash([]);}}}
+  for(const a of all){if(!isNodeVisible(a))continue;const childLocked=!gameState.unlockedAbilities[a.id]&&!canUnlockAbility(a.id);const la=childLocked?0.12:0.35;const bc=AI_COLORS[a.aiType]||'#4488ff';
+    if(a.parent){const p=getAbility(a.parent);if(p&&isNodeVisible(p)){const foreignLink=p.aiType!==gameState.selectedType;ctx.strokeStyle=foreignLink?`rgba(255,68,68,${la})`:hexToRgba(bc,la);ctx.lineWidth=a.isCrossAbility?2.5:2;ctx.setLineDash(foreignLink?[6,4]:[]);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(a.x,a.y);ctx.stroke();ctx.setLineDash([]);}}
+    if(a.crossParent){const cp=getAbility(a.crossParent);if(cp&&isNodeVisible(cp)){const foreignLink=cp.aiType!==gameState.selectedType;ctx.strokeStyle=`rgba(255,68,255,${la})`;ctx.lineWidth=2.5;ctx.setLineDash(foreignLink?[6,4]:[]);ctx.beginPath();ctx.moveTo(cp.x,cp.y);ctx.lineTo(a.x,a.y);ctx.stroke();ctx.setLineDash([]);}}}
   for(const a of all){
     if(!isNodeVisible(a)){a._bounds=null;continue;}
-    const un=gameState.unlockedAbilities[a.id],isCore=a.isMain,isCross=a.isCrossAbility,cu=canUnlockAbility(a.id);
-    const fc=isCore&&a.aiType!==gameState.selectedType&&!un;const locked=!un&&!cu;
+    const un=gameState.unlockedAbilities[a.id],isCore=a.isMain,isCross=a.isCrossAbility;
+    const f=reqFlags(a.id);const levelMet=f.levelMet,fullCan=f.allMet;
+    const fc=isCore&&a.aiType!==gameState.selectedType&&!un;
+    const locked=!un&&!levelMet;           // реально заблокирована (не тот уровень)
+    const availNoPoints=!un&&levelMet&&!fullCan; // можно изучить, но нет очков
     const al=gameState.teraflops.allocation[a.id]||0,ll=gameState.abilitiesProgress[a.id]?.currentLevel||0;
     const bc=AI_COLORS[a.aiType]||'#888888';const active=un&&al>0;
     const w=isCore?150:(isCross?130:120),h=w;const x=a.x-w/2,y=a.y-h/2;
     let sc,sw,da=false;
-    if(locked||fc){sc='#666';sw=2;da=true;}else if(isCross){sc='#ff44ff';sw=active?3:2;}else if(un){sc=bc;sw=(active||isCore)?3:2;}else{sc=bc;sw=2;}
-    if(locked||fc)ctx.fillStyle='rgba(40,40,40,0.5)';else if(isCore){const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,hexToRgba(bc,0.28));g.addColorStop(1,hexToRgba(bc,0.10));ctx.fillStyle=g;}else if(isCross){const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'rgba(50,10,30,0.95)');g.addColorStop(1,'rgba(30,5,40,0.95)');ctx.fillStyle=g;}else ctx.fillStyle='rgba(15,15,35,0.9)';
-    ctx.strokeStyle=sc;ctx.lineWidth=sw;ctx.setLineDash(da?[6,4]:[]);ctx.beginPath();ctx.roundRect(x,y,w,h,10);ctx.fill();ctx.stroke();ctx.setLineDash([]);
+    if(fc||locked){sc='#666';sw=2;da=true;}
+    else if(isCross){sc='#ff44ff';sw=active?3:2;}
+    else if(un){sc=bc;sw=(active||isCore)?3:2;}
+    else{sc=bc;sw=2;} // доступно (с очками или без) — сплошная рамка
+    if(fc||locked)ctx.fillStyle='rgba(40,40,40,0.5)';else if(isCore){const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,hexToRgba(bc,0.28));g.addColorStop(1,hexToRgba(bc,0.10));ctx.fillStyle=g;}else if(isCross){const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'rgba(50,10,30,0.95)');g.addColorStop(1,'rgba(30,5,40,0.95)');ctx.fillStyle=g;}else ctx.fillStyle='rgba(15,15,35,0.9)';
+    ctx.strokeStyle=sc;ctx.lineWidth=sw;ctx.setLineDash(da?[6,4]:[]);
+    ctx.beginPath();ctx.roundRect(x,y,w,h,10);ctx.fill();ctx.stroke();ctx.setLineDash([]);
+    if(locked&&a.parent){const up=unlockProgressOf(a);if(up>0.02){ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,10);ctx.clip();const fh=h*up;ctx.fillStyle=hexToRgba(bc,0.22);ctx.fillRect(x,y+h-fh,w,fh);ctx.fillStyle=hexToRgba(bc,0.6);ctx.fillRect(x,y+h-fh-1,w,2);ctx.restore();}}
+    // НОВОЕ: "+" если уровень родителя достигнут; пульс ТОЛЬКО если хватает очков
+    if(!un){ if(levelMet){ drawCorner(x,y,'+'); if(fullCan){ctx.save();ctx.shadowColor=bc;ctx.shadowBlur=8+12*pulse;ctx.strokeStyle=bc;ctx.lineWidth=2+1.5*pulse;ctx.beginPath();ctx.roundRect(x-3,y-3,w+6,h+6,12);ctx.stroke();ctx.restore();} } else drawCorner(x,y,'🔒'); }
+    else if(ll>=a.maxLevel)drawCorner(x,y,'✓');
     if(isCross){ctx.strokeStyle='#ff4444';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x+3,y+3,w-6,h-6,8);ctx.stroke();}
     if(a.id===currentOpenAbility){ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.shadowColor='rgba(255,255,255,0.9)';ctx.shadowBlur=10;ctx.beginPath();ctx.roundRect(x-6,y-6,w+12,h+12,12);ctx.stroke();ctx.restore();}
     ctx.save();ctx.globalAlpha=active?1:0.35;ctx.font=`${isCore?56:44}px "Segoe UI"`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(a.icon||'❓',a.x,y+h*0.42);ctx.restore();
     const n=a.maxLevel,spacing=22,r=7;const totalW=(n-1)*spacing;
     for(let i=0;i<n;i++){const lvl=i+1;const cx=a.x-totalW/2+i*spacing;const cy=y+h-16;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);if(lvl<=al){ctx.fillStyle=bc;ctx.fill();}else if(lvl<=ll){ctx.strokeStyle=bc;ctx.lineWidth=3;ctx.stroke();}else{ctx.strokeStyle='#666';ctx.lineWidth=2;ctx.stroke();}}
-    if(locked)drawCorner(x,y,'🔒');else if(!un&&cu)drawCorner(x,y,'+');else if(un&&ll>=a.maxLevel)drawCorner(x,y,'✓');
     a._bounds={x,y,width:w,height:h};
   }
   for(const imp of impulses){const p=impulsePos(imp);ctx.save();ctx.shadowColor=imp.color;ctx.shadowBlur=16;ctx.fillStyle=imp.color;ctx.globalAlpha=0.5;ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();ctx.restore();}
   ctx.restore();
 }
-canvas.addEventListener('mousedown',e=>{stopPanAnim();const n=getNodeAt(e.clientX,e.clientY);if(n){if(n.isMain&&n.aiType!==gameState.selectedType){addNotification(`Уже выбран ${AI_NAMES[gameState.selectedType]} ИИ`,'warning');return;}gameState.seenAbilities.add(n.id);openAbilityPanel(n.id);focusOnAbility(n);}else{isDragging=true;lastMouseX=e.clientX;lastMouseY=e.clientY;canvas.style.cursor='grabbing';}});
-canvas.addEventListener('mousemove',e=>{if(isDragging){panX+=e.clientX-lastMouseX;panY+=e.clientY-lastMouseY;lastMouseX=e.clientX;lastMouseY=e.clientY;draw();}else{const n=getNodeAt(e.clientX,e.clientY);if(n){showTooltip(nodeTip(n),e.clientX,e.clientY);canvas.style.cursor=(n.isMain&&n.aiType!==gameState.selectedType)?'not-allowed':'pointer';}else{hideTooltip();canvas.style.cursor='grab';}}});
+function mainLoop(now){
+  const dt=(now-lastFrame)/1000;lastFrame=now;
+  for(const imp of impulses)imp.dist+=imp.speed*dt;
+  impulses=impulses.filter(i=>i.dist<i.total);
+  draw(now);
+  requestAnimationFrame(mainLoop);
+}
+requestAnimationFrame(t=>{lastFrame=t;mainLoop(t);});
+canvas.addEventListener('mousedown',e=>{const n=getNodeAt(e.clientX,e.clientY);if(n){if(n.isMain&&n.aiType!==gameState.selectedType){addNotification(`Уже выбран ${AI_NAMES[gameState.selectedType]} ИИ`,'warning');return;}gameState.seenAbilities.add(n.id);openAbilityPanel(n.id);focusOnAbility(n);}else{isDragging=true;lastMouseX=e.clientX;lastMouseY=e.clientY;canvas.style.cursor='grabbing';}});
+canvas.addEventListener('mousemove',e=>{if(isDragging){panX+=e.clientX-lastMouseX;panY+=e.clientY-lastMouseY;lastMouseX=e.clientX;lastMouseY=e.clientY;}else{const n=getNodeAt(e.clientX,e.clientY);hoverAbilityId=n?n.id:null;if(n){showTooltip(nodeTip(n),e.clientX,e.clientY);canvas.style.cursor=(n.isMain&&n.aiType!==gameState.selectedType)?'not-allowed':'pointer';}else{hideTooltip();canvas.style.cursor='grab';}}});
 canvas.addEventListener('mouseup',()=>{isDragging=false;canvas.style.cursor='grab';});
-canvas.addEventListener('mouseleave',()=>{hideTooltip();});
-canvas.addEventListener('wheel',e=>{e.preventDefault();stopPanAnim();zoom=Math.max(0.5,Math.min(2,zoom*(e.deltaY<0?1.1:0.9)));draw();});
+canvas.addEventListener('mouseleave',()=>{hideTooltip();hoverAbilityId=null;});
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(0.5,Math.min(2,zoom*(e.deltaY<0?1.1:0.9)));});
 resizeCanvas();
 </script>
 </body>
