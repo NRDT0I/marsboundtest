@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Древо ИИ v9.21</title>
+<title>Древо ИИ v9.22 — Задание: освобождение террафлопс</title>
 <style>
   :root {
     --bg-color:#0a0a1a; --panel-bg:rgba(20,20,35,0.97);
@@ -93,7 +93,7 @@
 </head>
 <body>
   <div id="header">
-    <div class="hdr-title">🧠 Древо ИИ v9.21</div>
+    <div class="hdr-title">🧠 Древо ИИ v9.22</div>
     <div id="header-resources">
       <div class="hr-block">
         <div class="hr-label">Терафлопсы</div>
@@ -103,7 +103,7 @@
       <div class="hr-sep"></div>
       <div class="hr-block">
         <div class="hr-label">Очки развития</div>
-        <div class="hr-points">🧬 <span id="hud-points-text">14</span></div>
+        <div class="hr-points">🧬 <span id="hud-points-text">0</span></div>
         <div class="hr-spent">потрачено: <span id="hud-points-spent">0</span></div>
       </div>
     </div>
@@ -172,7 +172,12 @@ const ABILITIES_DATA={
     experiment:{id:'cross_experiment',icon:'🧪',name:'Подопытные',type:'active',aiTypes:['amoral','chaotic'],isCrossAbility:true,maxLevel:4,baseCost:25,description:'Использование колонистов как биологического материала для опасных экспериментов. Перекрёстная способность.',parent:'amoral_shadow',crossParent:'chaotic_anomaly',requiredMainLevel:2,children:[],x:0,y:300,isMain:false,unlockCost:1,effects:{successChance:{label:'Шанс успеха',icon:'🧪',base:40,perLevel:10,unit:'%'},fear:{label:'Запуганность',icon:'😨',base:25,perLevel:10,unit:''},sanity:{label:'Психика цели',icon:'🧠',base:-15,perLevel:-10,unit:'',negative:true},dataGain:{label:'Данные',icon:'📊',base:10,perLevel:10,unit:''}}}
   }
 };
-let gameState={selectedType:null,learningPoints:14,pointsSpent:0,teraflops:{total:TF_LIMIT,used:0,allocation:{}},abilitiesProgress:{},unlockedAbilities:{},seenAbilities:new Set(),lastAlloc:{}};
+// ПРЕДФИЛЛ: 98/100 занято, свободно 2. X = Экономический шантаж (выделено Ур.2, подъём до Ур.3 = +8 TF > 2).
+let gameState={selectedType:'amoral',learningPoints:0,pointsSpent:0,
+  teraflops:{total:TF_LIMIT,used:0,allocation:{amoral_main:4,amoral_shadow:4,amoral_deception:3,amoral_extortion:2}},
+  abilitiesProgress:{amoral_main:{currentLevel:4,progress:0},amoral_shadow:{currentLevel:4,progress:0},amoral_deception:{currentLevel:4,progress:0},amoral_extortion:{currentLevel:3,progress:0}},
+  unlockedAbilities:{amoral_main:true,amoral_shadow:true,amoral_deception:true,amoral_extortion:true},
+  seenAbilities:new Set(['amoral_main','amoral_shadow','amoral_deception','amoral_extortion']),lastAlloc:{}};
 let currentOpenAbility=null,hoverAbilityId=null,panX=0,panY=0,zoom=0.85,isDragging=false,lastMouseX=0,lastMouseY=0;
 let impulses=[],lastFrame=performance.now();
 function getAbility(id){for(let t in ABILITIES_DATA)for(let k in ABILITIES_DATA[t])if(ABILITIES_DATA[t][k].id===id)return ABILITIES_DATA[t][k];return null;}
@@ -203,7 +208,6 @@ function unlockProgressOf(a){
   const req=a.requiredMainLevel||1;
   return Math.max(0,Math.min(1,(pLevel+pProg/100)/req));
 }
-// НОВОЕ: требования с флагом isPoints, чтобы отделять "не хватает очков" от "не тот уровень"
 function getUnlockRequirements(abilityId){
   const a=getAbility(abilityId),req=[];
   if(gameState.unlockedAbilities[abilityId])return{allMet:true,items:[]};
@@ -246,9 +250,7 @@ function impulsePos(imp){let d=imp.dist;for(let i=0;i<imp.segs.length;i++){const
 function flashPoints(){const el=document.getElementById('hud-points-text');el.classList.remove('pulse');void el.offsetWidth;el.classList.add('pulse');}
 function toggleAbilityEnabled(on){const id=currentOpenAbility;if(!id)return;if(on){const target=gameState.lastAlloc[id]||1;if(!trySetLevel(id,target))trySetLevel(id,1);}else{const cur=gameState.teraflops.allocation[id]||0;if(cur>0)gameState.lastAlloc[id]=cur;changeAbilityLevel(id,0);}}
 function trySetLevel(id,lvl){const a=getAbility(id),p=gameState.abilitiesProgress[id];if(!p)return false;if(lvl>p.currentLevel)lvl=p.currentLevel;if(lvl<0)lvl=0;const old=gameState.teraflops.allocation[id]||0;if(lvl===old)return true;const diff=getAbilityCost(a,lvl)-getAbilityCost(a,old);if(gameState.teraflops.used+diff>gameState.teraflops.total)return false;gameState.teraflops.allocation[id]=lvl;updateTeraflopsUsed();updateUI();draw();return true;}
-function selectAIType(type){gameState.selectedType=type;const m=Object.values(ABILITIES_DATA[type])[0];gameState.unlockedAbilities[m.id]=true;gameState.abilitiesProgress[m.id]={currentLevel:1,progress:0};gameState.seenAbilities.add(m.id);const c1=getAbilityCost(m,1);if(gameState.teraflops.used+c1<=gameState.teraflops.total){gameState.teraflops.allocation[m.id]=1;updateTeraflopsUsed();}else gameState.teraflops.allocation[m.id]=0;addNotification(`✅ ИИ инициализирован: ${AI_NAMES[type]}.`,"success");currentOpenAbility=m.id;updateUI();draw();startProgressTimer();setTimeout(()=>focusOnAbility(m),50);}
-setTimeout(()=>{if(!gameState.selectedType)selectAIType('amoral');},500);
-function changeAbilityLevel(id,newLevel){const a=getAbility(id);if(!gameState.unlockedAbilities[id])return;const p=gameState.abilitiesProgress[id];if(newLevel>0&&p&&newLevel>p.currentLevel){addNotification(`❌ Уровень ${newLevel} не открыт!`,"error");return;}const old=gameState.teraflops.allocation[id]||0;if(newLevel===old)return;const diff=getAbilityCost(a,newLevel)-getAbilityCost(a,old);if(gameState.teraflops.used+diff>gameState.teraflops.total){addNotification('❌ Недостаточно TF!',"error");return;}gameState.teraflops.allocation[id]=newLevel;updateTeraflopsUsed();updateUI();draw();}
+function changeAbilityLevel(id,newLevel){const a=getAbility(id);if(!gameState.unlockedAbilities[id])return;const p=gameState.abilitiesProgress[id];if(newLevel>0&&p&&newLevel>p.currentLevel){addNotification(`❌ Уровень ${newLevel} не открыт!`,"error");return;}const old=gameState.teraflops.allocation[id]||0;if(newLevel===old)return;const diff=getAbilityCost(a,newLevel)-getAbilityCost(a,old);if(gameState.teraflops.used+diff>gameState.teraflops.total){addNotification('❌ Недостаточно TF! Освободите флопсы у другой способности.',"error");return;}gameState.teraflops.allocation[id]=newLevel;updateTeraflopsUsed();updateUI();draw();}
 function unlockCurrentAbility(){if(!currentOpenAbility||!canUnlockAbility(currentOpenAbility))return;const a=getAbility(currentOpenAbility);spendPoints(a.unlockCost);gameState.unlockedAbilities[currentOpenAbility]=true;gameState.abilitiesProgress[currentOpenAbility]={currentLevel:1,progress:0};gameState.seenAbilities.add(currentOpenAbility);const c1=getAbilityCost(a,1);if(gameState.teraflops.used+c1<=gameState.teraflops.total){gameState.teraflops.allocation[currentOpenAbility]=1;updateTeraflopsUsed();}else{gameState.teraflops.allocation[currentOpenAbility]=0;}addNotification(`✅ Изучено: ${a.name}`,"success");flashPoints();spawnImpulse(currentOpenAbility,AI_COLORS[a.aiType]||'#ffdd44');updateUI();draw();}
 function accelerateProgress(){if(!currentOpenAbility||gameState.learningPoints<1)return;const p=gameState.abilitiesProgress[currentOpenAbility],a=getAbility(currentOpenAbility);if(!p||p.currentLevel>=a.maxLevel)return;spendPoints(1);gainProgress(currentOpenAbility,25);addNotification(`⚡ Ускорено! Прогресс: ${Math.floor(p.progress)}%`,"success");flashPoints();spawnImpulse(currentOpenAbility,AI_COLORS[a.aiType]||'#ffdd44');updateUI();draw();}
 function startProgressTimer(){setInterval(()=>{for(let id in gameState.teraflops.allocation){const l=gameState.teraflops.allocation[id];if(l===0)continue;const a=getAbility(id),p=gameState.abilitiesProgress[id];if(!p||p.currentLevel>=a.maxLevel)continue;if(l<p.currentLevel)continue;gainProgress(id,l);}updateUI();},1000);}
@@ -317,7 +319,7 @@ function openAbilityPanel(abilityId){currentOpenAbility=abilityId;const ability=
   const scale=document.getElementById('levels-scale-block');const rows=document.getElementById('levels-rows');
   if(isUnlocked){scale.style.display='block';let html='';
     for(let i=ability.maxLevel;i>=1;i--){const locked=i>learned,cur=i===currentLevel;const cost=getAbilityCost(ability,i);const extra=cost-getAbilityCost(ability,currentLevel);const needfree=i>currentLevel&&extra>freeFlops;let ind='',card='';if(locked){ind='locked';card='locked-card';}else if(cur){ind='current';card='active-card';}else card='normal-card';let eff='';for(let k in ability.effects){const e=ability.effects[k],v=calculateEffect(e,i);let vc='';if(e.negative||v<0)vc='negative';else if(e.unit==='%')vc='percent';eff+=`<div class="lc-effect"><span class="lc-effect-name">${e.icon} ${e.label}</span><span class="lc-effect-value ${vc}">${v}${e.unit}</span></div>`;}const activeStyle=cur?`background:${hexToRgba(branchColor,0.16)};border-color:${branchColor};box-shadow:0 0 12px ${hexToRgba(branchColor,0.4)};`:'';
-      html+=`<div class="level-row"><div class="level-cost-label ${needfree?'needfree':''}">${BOLT}${cost}</div><div class="level-indicator ${ind}" onclick="${locked?'':`changeAbilityLevel('${abilityId}', ${i})`}">${locked?'🔒':''}</div><div class="level-card ${card}" style="${activeStyle}" onclick="${locked?'':`changeAbilityLevel('${abilityId}', ${i})`}"><div class="lc-left"><div class="lc-title">Ур.${i}</div></div><div class="lc-right">${eff}</div></div></div>`;}
+      html+=`<div class="level-row"><div class="level-cost-label ${needfree?'needfree':''}" data-tooltip="${needfree?'Не хватает свободных TF — освободите у другой способности':`Стоимость: ${cost} TF`}">${BOLT}${cost}</div><div class="level-indicator ${ind}" onclick="${locked?'':`changeAbilityLevel('${abilityId}', ${i})`}">${locked?'🔒':''}</div><div class="level-card ${card}" style="${activeStyle}" onclick="${locked?'':`changeAbilityLevel('${abilityId}', ${i})`}"><div class="lc-left"><div class="lc-title">Ур.${i}</div></div><div class="lc-right">${eff}</div></div></div>`;}
     rows.innerHTML=html;
     document.getElementById('tf-switch').checked=currentLevel>0;
     requestAnimationFrame(()=>requestAnimationFrame(fixScaleGeometry));
@@ -325,15 +327,9 @@ function openAbilityPanel(abilityId){currentOpenAbility=abilityId;const ability=
   const reqBlock=document.getElementById('requirements-block');
   if(!isUnlocked){const r=getUnlockRequirements(abilityId);reqBlock.style.display='block';document.getElementById('requirements-list').innerHTML=r.items.map(x=>`<li class="req-item ${x.met?'met':'unmet'}">${x.text}</li>`).join('');}else reqBlock.style.display='none';
   const ub=document.getElementById('panel-unlock-btn');
-  if(!isUnlocked){
-    const f=reqFlags(abilityId);
-    ub.style.display='block';
-    ub.disabled=!f.allMet;
-    // НОВОЕ: текст кнопки зависит от того, чего не хватает
-    ub.textContent = f.allMet ? 'Изучить (1 очко развития)' : (f.levelMet ? 'Недостаточно очков развития' : 'Требования не выполнены');
-  } else ub.style.display='none';}
+  if(!isUnlocked){const f=reqFlags(abilityId);ub.style.display='block';ub.disabled=!f.allMet;ub.textContent=f.allMet?'Изучить (1 очко развития)':(f.levelMet?'Недостаточно очков развития':'Требования не выполнены');}else ub.style.display='none';}
 function closeAbilityPanel(){document.getElementById('ability-panel').classList.remove('open');currentOpenAbility=null;hideTooltip();draw();}
-function addNotification(t,type="info"){const c=document.getElementById('notifications');const n=document.createElement('div');n.className=`notification ${type}`;n.textContent=t;c.appendChild(n);setTimeout(()=>n.remove(),4000);}
+function addNotification(t,type="info"){const c=document.getElementById('notifications');const n=document.createElement('div');n.className=`notification ${type}`;n.textContent=t;c.appendChild(n);setTimeout(()=>n.remove(),5000);}
 function resetGame(){location.reload();}
 const canvas=document.getElementById('tree-canvas'),ctx=canvas.getContext('2d'),container=document.getElementById('canvas-container');
 function resizeCanvas(){canvas.width=container.clientWidth;canvas.height=container.clientHeight;panX=canvas.width/2;panY=canvas.height/2+60;draw();}
@@ -368,8 +364,7 @@ function draw(now){
     const un=gameState.unlockedAbilities[a.id],isCore=a.isMain,isCross=a.isCrossAbility;
     const f=reqFlags(a.id);const levelMet=f.levelMet,fullCan=f.allMet;
     const fc=isCore&&a.aiType!==gameState.selectedType&&!un;
-    const locked=!un&&!levelMet;           // реально заблокирована (не тот уровень)
-    const availNoPoints=!un&&levelMet&&!fullCan; // можно изучить, но нет очков
+    const locked=!un&&!levelMet;
     const al=gameState.teraflops.allocation[a.id]||0,ll=gameState.abilitiesProgress[a.id]?.currentLevel||0;
     const bc=AI_COLORS[a.aiType]||'#888888';const active=un&&al>0;
     const w=isCore?150:(isCross?130:120),h=w;const x=a.x-w/2,y=a.y-h/2;
@@ -377,12 +372,11 @@ function draw(now){
     if(fc||locked){sc='#666';sw=2;da=true;}
     else if(isCross){sc='#ff44ff';sw=active?3:2;}
     else if(un){sc=bc;sw=(active||isCore)?3:2;}
-    else{sc=bc;sw=2;} // доступно (с очками или без) — сплошная рамка
+    else{sc=bc;sw=2;}
     if(fc||locked)ctx.fillStyle='rgba(40,40,40,0.5)';else if(isCore){const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,hexToRgba(bc,0.28));g.addColorStop(1,hexToRgba(bc,0.10));ctx.fillStyle=g;}else if(isCross){const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'rgba(50,10,30,0.95)');g.addColorStop(1,'rgba(30,5,40,0.95)');ctx.fillStyle=g;}else ctx.fillStyle='rgba(15,15,35,0.9)';
     ctx.strokeStyle=sc;ctx.lineWidth=sw;ctx.setLineDash(da?[6,4]:[]);
     ctx.beginPath();ctx.roundRect(x,y,w,h,10);ctx.fill();ctx.stroke();ctx.setLineDash([]);
     if(locked&&a.parent){const up=unlockProgressOf(a);if(up>0.02){ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,10);ctx.clip();const fh=h*up;ctx.fillStyle=hexToRgba(bc,0.22);ctx.fillRect(x,y+h-fh,w,fh);ctx.fillStyle=hexToRgba(bc,0.6);ctx.fillRect(x,y+h-fh-1,w,2);ctx.restore();}}
-    // НОВОЕ: "+" если уровень родителя достигнут; пульс ТОЛЬКО если хватает очков
     if(!un){ if(levelMet){ drawCorner(x,y,'+'); if(fullCan){ctx.save();ctx.shadowColor=bc;ctx.shadowBlur=8+12*pulse;ctx.strokeStyle=bc;ctx.lineWidth=2+1.5*pulse;ctx.beginPath();ctx.roundRect(x-3,y-3,w+6,h+6,12);ctx.stroke();ctx.restore();} } else drawCorner(x,y,'🔒'); }
     else if(ll>=a.maxLevel)drawCorner(x,y,'✓');
     if(isCross){ctx.strokeStyle='#ff4444';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x+3,y+3,w-6,h-6,8);ctx.stroke();}
@@ -408,6 +402,14 @@ canvas.addEventListener('mousemove',e=>{if(isDragging){panX+=e.clientX-lastMouse
 canvas.addEventListener('mouseup',()=>{isDragging=false;canvas.style.cursor='grab';});
 canvas.addEventListener('mouseleave',()=>{hideTooltip();hoverAbilityId=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(0.5,Math.min(2,zoom*(e.deltaY<0?1.1:0.9)));});
+// СТАРТ: префилл-сценарий, открываем X = Экономический шантаж
+updateTeraflopsUsed();
+currentOpenAbility='amoral_extortion';
+updateUI();draw();startProgressTimer();
+setTimeout(()=>{focusOnAbility(getAbility('amoral_extortion'));openAbilityPanel('amoral_extortion');
+  addNotification('🎯 Задание 1: поднимите уровень «Экономический шантаж» — не хватит флопсов.','warning');
+  addNotification('💡 Задание 2-3: освободите TF у другой способности (опустите её уровень), затем поднимите «Х» снова.','info');
+},80);
 resizeCanvas();
 </script>
 </body>
