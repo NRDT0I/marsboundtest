@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Экспедиции Марс v0.27.2</title>
+<style>
+:root{--cy:#35e0ff;--bg:#04121a;--pan:#06202b;--line:#0e4b5c;--grn:#5dff9d;--blu:#4f8cff;--org:#ffb347;--red:#ff5d6c;--txt:#bfeef7;--teal:#5fbdae;--teald:#1d5a55}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Consolas,Monaco,monospace}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--txt);overflow:hidden;user-select:none}
+#cv{position:fixed;inset:0}
+#errov{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99;background:#2b060aee;border:2px solid var(--red);color:var(--red);padding:14px;font-size:13px;max-width:80vw;white-space:pre-wrap}
+#okv{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99;background:#062a36ee;border:1px solid var(--grn);color:var(--grn);padding:8px 14px;font-size:13px}
+#topbar{position:fixed;top:0;left:0;right:0;height:34px;background:#03141cdd;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;padding:0 12px;font-size:13px;z-index:5}
+#topbar b{color:var(--cy)}
+.btn{background:#062a36;border:1px solid var(--line);color:var(--cy);padding:3px 8px;cursor:pointer;font-size:12px}
+.btn:hover{background:#0a3d4d}.btn.dis{opacity:.4;pointer-events:none}.btn.on{background:var(--cy);color:#02222c}
+#mapBtns{position:fixed;display:flex;flex-direction:column;gap:4px;z-index:6;align-items:stretch;min-width:180px}
+#mapBtns .btn{width:100%;text-align:center}
+#mapBtns .mut{width:100%;text-align:center}
+#routebar{position:fixed;top:40px;left:8px;background:#03141ccc;border:1px solid var(--line);padding:4px 8px;font-size:12px;z-index:5;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:640px}
+#poi{position:fixed;top:78px;left:8px;width:320px;max-height:calc(100% - 150px);overflow:auto;background:#041820ee;border:1px solid var(--line);padding:8px;z-index:5;font-size:12px}
+#ctx{position:fixed;top:78px;left:8px;width:340px;max-height:calc(100% - 150px);overflow:auto;background:#041820ee;border:1px solid var(--cy);padding:10px;z-index:5;font-size:12px}
+#srcPop{position:fixed;background:#06202b;border:1px solid var(--cy);z-index:40;min-width:300px;font-size:12px;box-shadow:0 0 14px #35e0ff44}
+#hint{position:fixed;bottom:0;left:0;right:0;height:26px;background:#03141cdd;border-top:1px solid var(--line);font-size:12px;display:flex;align-items:center;padding:0 12px;z-index:5;color:#7fd6e8}
+#mw{position:fixed;inset:0;background:#000a;z-index:10;display:flex;align-items:center;justify-content:center}
+#mb{width:1000px;height:680px;background:var(--pan);border:1px solid var(--cy);padding:14px;font-size:12px;display:flex;flex-direction:column;overflow:hidden}
+#qtyPop{position:fixed;background:#06202b;border:1px solid var(--cy);padding:6px 8px;z-index:30;display:flex;gap:8px;align-items:center;font-size:12px}
+#qtyPop input{width:140px;accent-color:var(--cy)}
+h2{color:var(--cy);font-size:18px;margin-bottom:8px;font-weight:normal;letter-spacing:2px;flex:none}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 1 0;min-height:0;overflow:hidden}
+.col{overflow-y:auto;min-height:0;padding-right:4px}
+#valzone{max-height:96px;overflow-y:auto;flex:none;border-top:1px solid var(--line);margin-top:6px;padding-top:4px}
+.sendrow{flex:none}
+.colhead{background:var(--teal);color:#03222b;font-weight:bold;padding:4px 8px;display:flex;gap:6px;align-items:center}
+.sechead{background:var(--teald);color:#7ff3ff;padding:2px 8px;margin-top:4px}
+.rrow{display:flex;gap:8px;align-items:center;padding:3px 8px;border-bottom:1px solid #0a3140;flex-wrap:wrap}
+.rrow.click{cursor:pointer}.rrow.click:hover{background:#0a3d4d}.rrow .grow{flex:1}
+.slots{background:#05222c;padding-left:26px;min-height:26px}
+body.dragc .dz{outline:1px dashed #5dff9d33;outline-offset:-1px}
+.dz.over{outline:1px solid #5dff9d88;background:#0a4a3a22}
+.warn{color:var(--org);margin:2px 0}.block{color:var(--red);margin:2px 0}.ok{color:var(--grn)}
+.chip{border:1px solid var(--line);background:#083040;padding:1px 6px;margin:1px;display:inline-flex;gap:4px;align-items:center;cursor:grab}
+.chip.src{border-color:var(--cy)}
+.chip.ro{cursor:default}
+.bar{height:6px;background:#0a3140;width:90px;display:inline-block}.bar i{display:block;height:6px;background:var(--cy)}
+.mut{color:#6fa8b8}
+#poolzone{border:1px dashed var(--line);padding:4px;min-height:30px}
+.hdr{display:flex;gap:14px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line);flex-wrap:wrap;flex:none}
+.exhdr{display:flex;gap:10px;align-items:center;padding:4px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+</style></head><body>
+<canvas id="cv"></canvas>
+<div id="errov" hidden></div><div id="okv" hidden></div>
+<div id="topbar"></div><div id="routebar"></div><div id="poi" hidden></div><div id="ctx" hidden></div><div id="srcPop" hidden></div><div id="mapBtns" hidden></div>
+<div id="hint"></div><div id="qtyPop" hidden></div>
+<div id="mw" hidden><div id="mb"></div></div>
+<script>
+function showErr(m){var d=document.getElementById('errov');d.hidden=false;d.textContent='ОШИБКА JS:\n'+m+'\n(пришли текст разработчику)';}
+window.addEventListener('error',function(e){showErr(e.message+' (стр.'+e.lineno+')');});
+var VER='v0.27.2',MAPW=64,MAPH=40;
+var ITEMS={ration:{n:'Пайки',w:1,cat:'Food'},bandage:{n:'Бинты',w:0.5,cat:'Medicine'},stab:{n:'Стабилизатор',w:8,cat:'Tools'},fuel:{n:'Канистра',w:6,cat:'Tools'},ore:{n:'Руда',w:3,cat:'Resources'},scrap:{n:'Металлолом',w:2,cat:'Resources'}};
+var CATS=['Food','Medicine','Tools','Resources'];
+var CFG={footSp:4,exoSp:5,rovSp:12,fatKm:1.6,fatKmExo:0.9,exoKm:1.2,fuelNet:0.5,solarStop:0.3,baseFuel:8,baseFat:8,fieldFat:4,baseExo:10,capFoot:12,capExo:30,capRov:100,seats:4,sleepAt:75,sleepRecFoot:6,sleepRecRov:8,minPerSec:10,fuelCan:50};
+var POIS=[{id:'home',type:'home',x:12,y:22,name:'База',anomaly:null},{id:'r1',type:'res',x:30,y:14,name:'Гряда Альфа',anomaly:null},{id:'r2',type:'res',x:44,y:30,name:'Кратер Южный',anomaly:'Магнитная аномалия'},{id:'d1',type:'deb',x:26,y:30,name:'Обломки зонда',anomaly:'Пылевая буря'},{id:'d2',type:'deb',x:50,y:12,name:'Поле обломков',anomaly:null},{id:'u1',type:'unk',x:38,y:22,name:'Сигнал X',anomaly:'Пылевая буря'},{id:'u2',type:'unk',x:20,y:10,name:'Аномалия N',anomaly:'Магнитная аномалия'},{id:'u3',type:'unk',x:52,y:26,name:'Точка Z',anomaly:null}];
+var S={day:1,min:0,speed:1,expN:0,plan:[],planMode:false,mode:null,selExp:null,selPoi:null,details:null,event:null,prevSpeed:1,dragging:false,origin:'base',qp:null,flash:null,flashT:0,btnAnchor:null,hoverMB:false,hoverCtx:false,
+base:{items:{ration:32,bandage:6,stab:1,fuel:3,ore:0,scrap:0},exos:[{ch:100},{ch:100}]},
+pstash:{},pexo:{},
+cols:[{id:'c1',n:'Анна',fat:0,loc:'base',exo:null,carried:{}},{id:'c2',n:'Мелиса',fat:0,loc:'base',exo:null,carried:{}},{id:'c3',n:'Мэтт',fat:0,loc:'base',exo:null,carried:{}},{id:'c4',n:'Игорь',fat:0,loc:'base',exo:null,carried:{}}],
+rovs:[{id:'v1',n:'Ровер-1',fuel:100,loc:'base',cargo:{}},{id:'v2',n:'Ровер-2',fuel:100,loc:'base',cargo:{}}],exps:[],log:[]};
+var EQ=null,SPL=null;
+function $(id){return document.getElementById(id);}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function W(o){var s=0;for(var k in o)s+=ITEMS[k].w*o[k];return s;}
+function homePoi(){return POIS[0];}
+function homeNode(){return{x:homePoi().x,y:homePoi().y,poi:homePoi(),home:true};}
+function pNode(p){return{x:p.x,y:p.y,poi:p};}
+function poiAt(pos){return POIS.find(function(p){return dist(p,pos)<0.6;});}
+function poiKey(p){return p.type==='home'?'base':p.id;}
+function hhmm(){return String(Math.floor(S.min/60)).padStart(2,'0')+':'+String(Math.floor(S.min%60)).padStart(2,'0');}
+function fmtDur(h){if(!isFinite(h))return '—';var d=Math.floor(h/24),r=Math.ceil(h%24);return d+'д '+r+'ч';}
+function setHTML(el,h){if(el.innerHTML===h)return;var st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;}
+function log(m){S.log.unshift('[D'+S.day+' '+hhmm()+'] '+m);if(S.log.length>60)S.log.length=60;}
+function flash(m){S.flash=m;S.flashT=performance.now()+3500;renderHint();}
+function col(id){return S.cols.find(function(c){return c.id===id;});}
+function rov(id){return S.rovs.find(function(r){return r.id===id;});}
+function stashOf(pid){return pid==='base'?S.base.items:(S.pstash[pid]=S.pstash[pid]||{});}
+function exoPool(pid){return pid==='base'?S.base.exos:(S.pexo[pid]=S.pexo[pid]||[]);}
+function rosterCols(pid){return S.cols.filter(function(c){return c.loc===pid;});}
+function rosterRovs(pid){return S.rovs.filter(function(r){return r.loc===pid;});}
+function pointHas(pid){var st=stashOf(pid);for(var i in st)if(st[i]>0)return true;return rosterCols(pid).length>0||rosterRovs(pid).length>0;}
+function isExpOrigin(){return !!(S.origin&&S.origin!=='base'&&S.exps.find(function(e){return e.id===S.origin&&e.state==='stranded';}));}
+function originExp(){return isExpOrigin()?S.exps.find(function(e){return e.id===S.origin;}):null;}
+function srcStash(){return stashOf(S.origin);}
+function srcExos(){return exoPool(S.origin);}
+function originPos(){var e=originExp();if(e)return{x:e.pos.x,y:e.pos.y};if(S.origin==='base')return{x:homePoi().x,y:homePoi().y};var p=POIS.find(function(x){return x.id===S.origin;});return p?{x:p.x,y:p.y}:{x:homePoi().x,y:homePoi().y};}
+function originLabel(){if(S.origin==='base')return 'База';var e=originExp();if(e)return e.name+' (авария)';var p=POIS.find(function(x){return x.id===S.origin;});return p?p.name:'База';}
+function cargoChips(o){var s='';for(var i in o)if(o[i]>0)s+='<span class="chip ro">'+ITEMS[i].n+' x'+o[i]+'</span>';return s||'<span class="mut">пусто</span>';}
+function workRov(e){return e.rovers.some(function(id){return rov(id).fuel>0;});}
+function expSpeed(e){if(workRov(e))return CFG.rovSp*(e.slow?0.5:1);var ms=e.members.map(function(id){var c=col(id);return(c.exo&&c.exo.ch>0)?CFG.exoSp:CFG.footSp;});return Math.min.apply(null,ms)*(e.slow?0.5:1);}
+function remDist(e){var d=0,p=e.pos;e.remaining.forEach(function(n){d+=dist(p,n);p=n;});return d;}
+function elapsedH(e){return (S.day-(e.day0||1))*24+(S.min-(e.min0||0))/60;}
+function expCargo(e){var agg={};e.members.forEach(function(id){var c=col(id);for(var i in c.carried)agg[i]=(agg[i]||0)+c.carried[i];});
+ e.rovers.forEach(function(id){var r=rov(id);for(var i in r.cargo)agg[i]=(agg[i]||0)+r.cargo[i];});return agg;}
+function expCapTot(e){var s=e.rovers.length*CFG.capRov;e.members.forEach(function(id){var c=col(id);s+=(c.exo?CFG.capExo:CFG.capFoot);});return s;}
+function isAtPoint(e){return e.state==='stranded'&&!e.remaining.length;}
+function stopKey(e){return (Math.round(e.pos.x*2)/2)+','+(Math.round(e.pos.y*2)/2);}
+function dispOffsets(){var groups={},out={};
+ S.exps.forEach(function(e){if(isAtPoint(e)){var k=stopKey(e);(groups[k]=groups[k]||[]).push(e);}});
+ for(var k in groups){var arr=groups[k],n=arr.length;
+  arr.forEach(function(e,i){var ang,r;if(n===1){ang=135*Math.PI/180;r=26;}else{ang=(-90+i*(360/n))*Math.PI/180;r=28;}
+   out[e.id]={dx:Math.cos(ang)*r,dy:Math.sin(ang)*r};});}
+ return out;}
+function tryAdd(e,item,q){var left=q;
+ e.members.forEach(function(id){var c=col(id),cap=(c.exo?CFG.capExo:CFG.capFoot)-W(c.carried),a=Math.min(left,Math.floor(cap/ITEMS[item].w));if(a>0){c.carried[item]=(c.carried[item]||0)+a;left-=a;}});
+ e.rovers.forEach(function(id){var r=rov(id),cap=CFG.capRov-W(r.cargo),a=Math.min(left,Math.floor(cap/ITEMS[item].w));if(a>0){r.cargo[item]=(r.cargo[item]||0)+a;left-=a;}});
+ return q-left;}
+function stTxt(e){return e.stop?'стоянка: '+e.stop.reason+' ('+Math.ceil(e.stop.h)+'ч)':e.state==='stranded'?'ТОПЛИВО 0 — ждёт спасателей':'движение '+expSpeed(e).toFixed(1)+' км/ч';}
+function poiDesc(p){return p.type==='home'?'База: склад, отдых, зарядка.':p.type==='res'?'Ресурсы: руда ~8 ед. по 3 кг.':p.type==='deb'?'Обломки: лом ~6 ед., пайки ~2.':'Неизвестно: раскроется по прибытии.';}
+function stashLine(pid){var st=stashOf(pid),out=[];for(var i in st)if(st[i]>0)out.push(ITEMS[i].n+' x'+st[i]);return out.length?out.join(', '):'пусто';}
+function dissolve(e,pid){var st=stashOf(pid),pool=exoPool(pid);
+ e.members.forEach(function(id){var c=col(id);for(var i in c.carried)st[i]=(st[i]||0)+c.carried[i];c.carried={};c.loc=pid;
+  if(c.exo){pool.push(c.exo);c.exo=null;}});
+ e.rovers.forEach(function(id){var r=rov(id);for(var i in r.cargo)st[i]=(st[i]||0)+r.cargo[i];r.cargo={};r.loc=pid;});
+ e.done=true;
+ log(e.name+': расположилась на точке '+(pid==='base'?'База':(POIS.find(function(p){return p.id===pid;})||{}).name)+' — люди и груз переданы точке.');}
+function joinExp(e,target){
+ e.members.forEach(function(id){var c=col(id);target.members.push(id);c.loc='exp';
+  for(var i in c.carried){var left=c.carried[i];var put=tryAdd(target,i,left);c.carried[i]=left-put;}});
+ e.rovers.forEach(function(id){var r=rov(id);target.rovers.push(id);r.loc='exp';
+  for(var i in r.cargo){var left=r.cargo[i];var put=tryAdd(target,i,left);r.cargo[i]=left-put;}});
+ e.done=true;log(e.name+': влилась в '+target.name+'.');}
+function stepExp(e,gh){
+ if(e.stop){e.stop.h-=gh;if(e.stop.rec)e.members.forEach(function(id){col(id).fat=Math.max(0,col(id).fat-e.stop.rec*gh);});
+  var done=e.stop.h<=0||(e.stop.type==='sleep'&&e.members.every(function(id){return col(id).fat<30;}))||(e.stop.type==='collapse'&&e.members.every(function(id){return col(id).fat<60;}));
+  if(done){log(e.name+': стоянка завершена ('+e.stop.reason+')');e.stop=null;}return;}
+ if(e.state==='stranded'){e.rovers.forEach(function(id){var r=rov(id);r.fuel=Math.min(100,r.fuel+CFG.solarStop*gh);});
+  if(e.rovers.some(function(id){return rov(id).fuel>1;})){e.state=e.remaining.length?'moving':'stranded';if(!e.remaining.length){var pp=poiAt(e.pos);if(pp)dissolve(e,poiKey(pp));}else log(e.name+': солнечная подзарядка — движение возобновлено.');}return;}
+ if(e.state!=='moving')return;
+ if(!e.remaining.length){if(e.autoRet){e.remaining=[homeNode()];log(e.name+': авторозврат.');}else{var p0=poiAt(e.pos);if(p0)dissolve(e,poiKey(p0));else e.remaining=[homeNode()];}return;}
+ if(dist(e.pos,e.remaining[0])<0.05){arrive(e,e.remaining.shift());return;}
+ var sp=expSpeed(e),km=Math.min(sp*gh,remDist(e));
+ if(!workRov(e))e.members.forEach(function(id){var c=col(id),ex=c.exo&&c.exo.ch>0;c.fat=Math.min(100,c.fat+(ex?CFG.fatKmExo:CFG.fatKm)*km);if(ex)c.exo.ch=Math.max(0,c.exo.ch-CFG.exoKm*km);});
+ var had=workRov(e);
+ if(had)e.rovers.forEach(function(id){var r=rov(id);r.fuel=Math.max(0,r.fuel-CFG.fuelNet*km);});
+ if(had&&!workRov(e)){e.state='stranded';log(e.name+': ТОПЛИВО 0! Встала. Вышлите канистры.');return;}
+ if(!workRov(e)&&km>0){
+  if(e.members.some(function(id){return col(id).fat>=100;})){e.stop={h:12,rec:5,type:'collapse',reason:'коллапс'};log(e.name+': коллапс!');}
+  else if(!e.urgent&&e.members.some(function(id){return col(id).fat>=CFG.sleepAt;})){var rec=e.rovers.length?CFG.sleepRecRov:CFG.sleepRecFoot;e.stop={h:10,rec:rec,type:'sleep',reason:'сон'};log(e.name+': лагерь (сон).');}
+  else if(e.urgent&&e.members.some(function(id){return col(id).fat>=CFG.sleepAt;})&&!e.warnFat){e.warnFat=true;log(e.name+': усталость >75% (срочный).');}}
+ var remain=km;
+ while(remain>0.001&&e.remaining.length&&e.state==='moving'){
+  var t=e.remaining[0],d=dist(e.pos,t);
+  if(d<=remain){remain-=d;e.pos={x:t.x,y:t.y};arrive(e,e.remaining.shift());}
+  else{e.pos.x+=(t.x-e.pos.x)/d*remain;e.pos.y+=(t.y-e.pos.y)/d*remain;remain=0;}}
+ if(e.state==='moving'&&Math.random()<0.03*gh)fireEvent(e);}
+function arrive(e,n){
+ if(n.home){dissolve(e,'base');return;}
+ if(n.stranded||n.exp){var t=n.exp?S.exps.find(function(x){return x.id===n.exp;}):S.exps.find(function(x){return x.id===n.stranded;});
+  if(t&&!e.remaining.length){joinExp(e,t);return;}
+  log(e.name+': прибыла к точке группы '+(t?t.name:'')+'.');}
+ else{var p=n.poi;
+  if(p.type==='res'){var a=tryAdd(e,'ore',8);log(e.name+': '+p.name+' — руда x'+a);}
+  if(p.type==='deb'){var b=tryAdd(e,'scrap',6),c2=tryAdd(e,'ration',2);log(e.name+': '+p.name+' — лом x'+b+', пайки x'+c2);}
+  if(p.type==='unk'){p.type=Math.random()<0.5?'res':'deb';var d2=p.type==='res'?tryAdd(e,'ore',4):tryAdd(e,'scrap',3);log(e.name+': '+p.name+' раскрыта, лут x'+d2);}}
+ var near=S.exps.find(function(x){return x.id!==e.id&&x.state==='stranded'&&dist(x.pos,e.pos)<0.5;});
+ if(near)log('Подсказка: рядом '+near.name+' без топлива — «Передать топливо» у её маркера.');
+ if(!e.remaining.length){
+  if(e.autoRet){e.remaining=[homeNode()];log(e.name+': авторозврат.');}
+  else{var pid=n.home?'base':(n.poi?poiKey(n.poi):null);
+   if(pid)dissolve(e,pid);
+   else if(n.exp||n.stranded){var t2=S.exps.find(function(x){return x.id===(n.exp||n.stranded);});if(t2)joinExp(e,t2);}
+   else e.state='stranded';}}}
+/* ==== форс-мажор ==== */
+function fireEvent(e){var type=(e.rovers.length&&Math.random()<0.5)?'break':'storm';
+ S.event={exp:e.id,type:type};S.prevSpeed=S.speed;S.speed=0;
+ S.selExp=e.id;S.selPoi=null;S.details=null;
+ var oo=dispOffsets()[e.id];var px=PX(e.pos)+(oo?oo.dx:0),py=PY(e.pos)+(oo?oo.dy:0);
+ S.btnAnchor={x:px+14,y:py+12};
+ flash('⚠ '+(type==='break'?'ПОЛОМКА РОВЕРА':'ПЫЛЕВАЯ БУРЯ')+' у '+e.name+' — выбери действие у маркера экспедиции!');
+ log(e.name+': форс-мажор ('+(type==='break'?'поломка':'буря')+'). Симуляция на паузе до решения.');
+ renderHud();}
+function eventChoice(i){var e=S.exps.find(function(x){return x.id===S.event.exp;});S.event=null;$('mw').hidden=true;S.speed=S.prevSpeed;if(!e)return;
+ if(i===0&&e.rovers.length){e.stop={h:4,rec:0,type:'repair',reason:'ремонт'};}
+ else if(i===0){e.stop={h:6,rec:2,type:'storm',reason:'укрытие'};}
+ else if(i===1&&e.rovers.length){e.slow=true;}
+ else if(i===1){e.members.forEach(function(id){col(id).fat=Math.min(100,col(id).fat+12);});}
+ else if(i===2){e.remaining=[homeNode()];e.state='moving';e.stop=null;}
+ log(e.name+': решение по форс-мажору принято ('+i+').');
+ renderHud();renderHint();}
+function hasCan(e){return e.members.some(function(id){return col(id).carried.fuel>0;})||e.rovers.some(function(id){return rov(id).cargo.fuel>0;});}
+function takeCan(e){var i;for(i=0;i<e.members.length;i++){var c=col(e.members[i]);if(c.carried.fuel>0){c.carried.fuel--;return;}}for(i=0;i<e.rovers.length;i++){var r=rov(e.rovers[i]);if(r.cargo.fuel>0){r.cargo.fuel--;return;}}}
+function refuel(aId,bId){var a=S.exps.find(function(x){return x.id===aId;}),b=S.exps.find(function(x){return x.id===bId;});if(!a||!b||!hasCan(a))return;takeCan(a);
+ var r=b.rovers.map(rov).find(function(x){return x.fuel<100;});if(r)r.fuel=Math.min(100,r.fuel+CFG.fuelCan);
+ log(a.name+': канистра → '+b.name+' (+'+CFG.fuelCan+'%).');
+ if(b.state==='stranded'&&b.rovers.some(function(id){return rov(id).fuel>0;})){b.state=b.remaining.length?'moving':'stranded';log(b.name+': ровер снова едет!');}
+ renderHud();}
+/* ==== планирование / источник ==== */
+function freshDraft(){return{members:{},rovers:{},exoOf:{},stash:{},carry:{},snap:{},urgent:false,autoRet:true};}
+function dropDraft(){if(EQ){reclaimAll();EQ=null;log('Черновик расформирован (груз возвращён).');}}
+function startPlan(key){if(EQ)dropDraft();
+ S.origin=key;S.plan=[];S.planMode=true;
+ log('Создание маршрута экспедиции с точки: '+originLabel()+'.');
+ renderHud();renderHint();}
+function endPlan(){S.planMode=false;S.plan=[];S.origin='base';log('Планирование отменено, источник сброшен на базу.');renderHud();renderHint();}
+function chooseSource(v){var same=v===S.origin;
+ if(!same){if(EQ)dropDraft();S.origin=v;log('Источник отправления: '+originLabel()+'.');}
+ $('srcPop').hidden=true;
+ if(!same&&!$('mw').hidden&&EQ){EQ=freshDraft();renderEquip();}
+ renderHud();renderHint();}
+function openSrcPop(x,y){var entries=[];
+ entries.push({v:'base',t:'⌂ База <span class="mut">'+rosterCols('base').length+' чел, '+rosterRovs('base').length+' ровер</span>'});
+ POIS.forEach(function(p){if(p.type==='home')return;if(pointHas(poiKey(p)))entries.push({v:poiKey(p),t:'▲ '+p.name+' <span class="mut">'+rosterCols(poiKey(p)).length+' чел, '+rosterRovs(poiKey(p)).length+' ровер</span>'});});
+ S.exps.forEach(function(e){if(e.state==='stranded'){var p=poiAt(e.pos);entries.push({v:e.id,t:'⛽0 '+e.name+' @ '+(p?p.name:'точка')+' <span class="mut">(авария)</span>'});}});
+ var h='<div class="sechead">Источник экспедиции</div>'+entries.map(function(en){return '<div class="rrow click" data-act="setsrc" data-v="'+en.v+'"><span class="grow">'+en.t+'</span></div>';}).join('');
+ var sp=$('srcPop');sp.innerHTML=h;sp.hidden=false;
+ sp.style.left=Math.min(innerWidth-320,x)+'px';sp.style.top=Math.min(innerHeight-240,y)+'px';}
+function startBuild(poiId){var pb=POIS.find(function(p){return p.id===poiId;});if(!pb)return;
+ var k=routeKey(pNode(pb));
+ if(!S.plan.some(function(n){return routeKey(n)===k;}))S.plan.push(pNode(pb));
+ openEquip();
+ renderHud();renderHint();}
+function planDist(){var d=0,p=originPos();S.plan.forEach(function(n){d+=dist(p,n);p=n;});return d;}
+function routeKey(n){return n.home?'home':n.poi?n.poi.id:n.exp?'e'+n.exp:n.stranded?'s'+n.stranded:'';}
+function toggleRouteNode(n){var k=routeKey(n),i=S.plan.findIndex(function(m){return routeKey(m)===k;});if(i>=0)S.plan.splice(i,1);else S.plan.push(n);renderHud();renderHint();}
+function addRouteNode(n){if(!S.plan.some(function(m){return routeKey(m)===routeKey(n);}))S.plan.push(n);renderHud();renderHint();}
+function rmRouteNode(n){var i=S.plan.findIndex(function(m){return routeKey(m)===routeKey(n);});if(i>=0)S.plan.splice(i,1);renderHud();renderHint();}
+function canAddHome(){return S.plan.length>0||S.origin!=='base';}
+/* ==== ДЕТАЛИ ==== */
+function openDetails(v){S.details=v[0]==='p'?{t:'poi',id:v.slice(2)}:{t:'exp',id:v.slice(2)};
+ $('mw').hidden=false;renderDetails();}
+function renderDetails(){var d=S.details;if(!d)return;var mb=$('mb'),h='';
+ if(d.t==='poi'){var key=d.id,p=POIS.find(function(x){return poiKey(x)===key;});
+  if(!p){S.details=null;return;}
+  h+='<h2>👁 ДЕТАЛИ: '+p.name+' <button class="btn" style="float:right" data-act="closedet">✕</button></h2>';
+  h+='<div class="hdr"><span>'+poiDesc(p)+'</span><span>Аномалии: '+(p.anomaly||'нет')+'</span><span>От базы: '+dist(homePoi(),p).toFixed(1)+' км</span></div>';
+  h+='<div style="flex:1 1 0;overflow-y:auto;min-height:0">';
+  h+='<div class="sechead">🚙 Роверы ('+rosterRovs(key).length+')</div>';
+  h+=rosterRovs(key).map(function(r){return '<div class="rrow"><span class="grow">🚙 '+r.n+' <span class="mut">⛽'+r.fuel.toFixed(0)+'% · '+W(r.cargo).toFixed(1)+'/100 кг</span></span>'+cargoChips(r.cargo)+'</div>';}).join('')||'<div class="rrow mut">нет</div>';
+  h+='<div class="sechead">👤 Колонисты ('+rosterCols(key).length+')</div>';
+  h+=rosterCols(key).map(function(c){return '<div class="rrow"><span class="grow">👤 '+c.n+' <span class="mut">уст.'+c.fat.toFixed(0)+'%'+(c.exo?' · exo'+Math.round(c.exo.ch)+'%':'')+' · '+W(c.carried).toFixed(1)+'/'+(c.exo?CFG.capExo:CFG.capFoot)+' кг</span></span>'+cargoChips(c.carried)+'</div>';}).join('')||'<div class="rrow mut">нет</div>';
+  h+='<div class="sechead">◈ Склад точки</div>';
+  var any=false;CATS.forEach(function(cat){var its=Object.keys(stashOf(key)).filter(function(i){return ITEMS[i].cat===cat&&stashOf(key)[i]>0;});if(!its.length)return;any=true;
+   h+='<div class="sechead" style="background:#0a3140">'+cat+'</div>';
+   its.forEach(function(i){h+='<div class="rrow"><span class="grow">◍ '+ITEMS[i].n+' x'+stashOf(key)[i]+'</span><span class="mut">'+(ITEMS[i].w*stashOf(key)[i]).toFixed(1)+' кг</span></div>';});});
+  if(!any)h+='<div class="rrow mut">пусто</div>';
+  h+='</div>';
+ }else{var e=S.exps.find(function(x){return x.id===d.id;});
+  if(!e){S.details=null;return;}
+  h+='<h2>👁 ДЕТАЛИ: '+e.name+' <button class="btn" style="float:right" data-act="closedet">✕</button></h2>';
+  h+='<div class="hdr"><span>'+stTxt(e)+'</span><span>В пути: '+fmtDur(elapsedH(e))+'</span><span>ETA: '+(e.state==='moving'?fmtDur(remDist(e)/Math.max(0.1,expSpeed(e))):'—')+'</span><span>⚖ '+W(expCargo(e)).toFixed(1)+'/'+expCapTot(e)+' кг</span>'+(e.urgent?'<span class="warn">⚡срочная</span>':'')+'</div>';
+  h+='<div style="flex:1 1 0;overflow-y:auto;min-height:0">';
+  h+='<div class="sechead">🚙 Роверы ('+e.rovers.length+')</div>';
+  h+=e.rovers.map(function(id){var r=rov(id);return '<div class="rrow"><span class="grow">🚙 '+r.n+' <span class="mut">⛽'+r.fuel.toFixed(0)+'% · '+W(r.cargo).toFixed(1)+'/100 кг</span></span>'+cargoChips(r.cargo)+'</div>';}).join('')||'<div class="rrow mut">нет</div>';
+  h+='<div class="sechead">👤 Колонисты ('+e.members.length+')</div>';
+  h+=e.members.map(function(id){var c=col(id);return '<div class="rrow"><span class="grow">👤 '+c.n+' <span class="mut">уст.'+c.fat.toFixed(0)+'%'+(c.exo?' · exo'+Math.round(c.exo.ch)+'%':'')+' · '+W(c.carried).toFixed(1)+'/'+(c.exo?CFG.capExo:CFG.capFoot)+' кг</span></span>'+cargoChips(c.carried)+'</div>';}).join('')||'<div class="rrow mut">нет</div>';
+  h+='</div>';}
+ mb.innerHTML=h;}
+/* ==== снаряжение ==== */
+function openEquip(){if(!EQ)EQ=freshDraft();S.details=null;$('mw').hidden=false;renderEquip();}
+function closeKeep(){$('mw').hidden=true;flash('Черновик сохранён.');}
+function parts(){if(!EQ)return[];var a=[];for(var k in EQ.members)if(EQ.members[k])a.push('c:'+k);for(var k2 in EQ.rovers)if(EQ.rovers[k2])a.push('r:'+k2);return a;}
+function partCap(p){return p[0]==='c'?(EQ.exoOf[p.slice(2)]?CFG.capExo:CFG.capFoot):CFG.capRov;}
+function partW(p){return W(EQ.carry[p]);}
+function partName(p){return p[0]==='c'?col(p.slice(2)).n:rov(p.slice(2)).n;}
+function srcTake(i){var st=srcStash();if(st[i]>0){st[i]--;return true;}return false;}
+function srcGive(i){var st=srcStash();st[i]=(st[i]||0)+1;}
+function moveUnit(from,to,item){var wI=ITEMS[item].w;
+ function C(p){EQ.carry[p]=EQ.carry[p]||{};return EQ.carry[p];}
+ function rem(src){if(src==='base')return srcTake(item);if(src==='pool'){if((EQ.stash[item]||0)>0){EQ.stash[item]--;return true;}return false;}if((C(src)[item]||0)>0){C(src)[item]--;return true;}return false;}
+ function add(dst){if(dst==='pool'){EQ.stash[item]=(EQ.stash[item]||0)+1;return true;}if(dst==='base'){srcGive(item);return true;}if(partCap(dst)-partW(dst)>=wI-1e-9){C(dst)[item]=(C(dst)[item]||0)+1;return true;}return false;}
+ if(!rem(from))return false;
+ if(!add(to)){if(from==='base')srcGive(item);else if(from==='pool')EQ.stash[item]++;else C(from)[item]++;return false;}
+ return true;}
+function availInfo(from,to,item){var srcQ=from==='base'?srcStash()[item]:from==='pool'?(EQ.stash[item]||0):((EQ.carry[from]||{})[item]||0);
+ if(to==='pool'||to==='base')return{srcQ:srcQ,cap:srcQ,max:Math.max(0,srcQ)};
+ var cap=Math.floor((partCap(to)-partW(to))/ITEMS[item].w+1e-9);return{srcQ:srcQ,cap:cap,max:Math.max(0,Math.min(srcQ,cap))};}
+function autoDist(){if(!EQ)return;var pool={};for(var i in EQ.stash)pool[i]=EQ.stash[i];EQ.stash={};EQ.carry={};parts().forEach(function(p){EQ.carry[p]={};});
+ for(var it in pool)for(var k=0;k<pool[it];k++){var best=null,br=0;
+  parts().forEach(function(p){var r=partCap(p)-partW(p);if(r>br+1e-9){br=r;best=p;}});
+  if(best&&br>=ITEMS[it].w)EQ.carry[best][it]=(EQ.carry[best][it]||0)+1;else EQ.stash[it]=(EQ.stash[it]||0)+1;}}
+function openQty(from,to,item,info,x,y){
+ if(info.max<1){flash('⚖ '+ITEMS[item].n+': нет места/остатка.');return;}
+ if(info.max===1){moveUnit(from,to,item);renderEquip();return;}
+ S.qp={from:from,to:to,item:item};var q=$('qtyPop');q.hidden=false;
+ var lim=info.cap<info.srcQ?'<span class="warn">⚖ влезет '+info.cap+' из '+info.srcQ+'</span>':'<span class="mut">в источнике '+info.srcQ+'</span>';
+ q.innerHTML='<span>'+ITEMS[item].n+'</span>'+lim+'<input type="range" min="1" max="'+info.max+'" value="'+info.max+'" id="qr"><span id="qv" style="color:var(--cy)">'+info.max+'</span><button class="btn on" id="qok">➤</button><button class="btn" id="qno">✕</button>';
+ q.style.left=Math.min(innerWidth-340,x)+'px';q.style.top=Math.min(innerHeight-60,y)+'px';
+ $('qr').oninput=function(e){$('qv').textContent=e.target.value;};
+ $('qok').onclick=function(){var n=+$('qr').value;for(var k=0;k<n;k++)moveUnit(from,to,item);q.hidden=true;S.qp=null;renderEquip();};
+ $('qno').onclick=function(){q.hidden=true;S.qp=null;};}
+function reclaimOwner(oid){var sn=EQ.snap[oid];if(!sn)return;var owner=oid[0]==='c'?col(oid.slice(2)):rov(oid.slice(2));var bag=oid[0]==='c'?owner.carried:owner.cargo;
+ for(var i in sn){var need=sn[i],t=Math.min(need,EQ.stash[i]||0);EQ.stash[i]-=t;need-=t;
+  parts().forEach(function(p){if(need<=0)return;var t2=Math.min(need,EQ.carry[p][i]||0);EQ.carry[p][i]-=t2;need-=t2;});
+  bag[i]=(bag[i]||0)+sn[i];}}
+function reclaimAll(){if(!EQ)return;
+ if(!isExpOrigin()){for(var i in EQ.stash)for(var k=0;k<EQ.stash[i];k++)srcGive(i);
+  parts().forEach(function(p){for(var j in EQ.carry[p])for(var k2=0;k2<EQ.carry[p][j];k2++)srcGive(j);});}
+ else{for(var oid in EQ.snap)reclaimOwner(oid);}
+ EQ.stash={};EQ.carry={};}
+function markC(id,on){var c=col(id);
+ if(on){EQ.members[id]=true;EQ.carry['c:'+id]={};if(isExpOrigin()){EQ.snap['c:'+id]={};for(var i in c.carried){EQ.snap['c:'+id][i]=c.carried[i];EQ.stash[i]=(EQ.stash[i]||0)+c.carried[i];}c.carried={};}}
+ else{delete EQ.members[id];delete EQ.exoOf[id];delete EQ.carry['c:'+id];if(isExpOrigin()&&EQ.snap['c:'+id]){reclaimOwner('c:'+id);delete EQ.snap['c:'+id];}}}
+function markR(id,on){var r=rov(id);
+ if(on){EQ.rovers[id]=true;EQ.carry['r:'+id]={};if(isExpOrigin()){EQ.snap['r:'+id]={};for(var i in r.cargo){EQ.snap['r:'+id][i]=r.cargo[i];EQ.stash[i]=(EQ.stash[i]||0)+r.cargo[i];}r.cargo={};}}
+ else{delete EQ.rovers[id];delete EQ.carry['r:'+id];if(isExpOrigin()&&EQ.snap['r:'+id]){reclaimOwner('r:'+id);delete EQ.snap['r:'+id];}}}
+function validate(){if(!EQ)return{B:[],Wn:[]};var B=[],Wn=[];
+ var ms=Object.keys(EQ.members).filter(function(k){return EQ.members[k];}),rs=Object.keys(EQ.rovers).filter(function(k){return EQ.rovers[k];});
+ if(!S.plan.length)B.push('Маршрут не построен.');
+ if(!ms.length)B.push('Нет колонистов.');
+ if(rs.length&&ms.length>rs.length*CFG.seats)B.push('Мест не хватает.');
+ var und=0;for(var q in EQ.stash)und+=EQ.stash[q];if(und)B.push('Нераспределённый пул: '+und+' шт.');
+ parts().forEach(function(p){if(partW(p)>partCap(p)+1e-9)B.push('Перегруз: '+partName(p));});
+ var E0=originExp();
+ if(E0){var lM=E0.members.filter(function(id){return !EQ.members[id];}).length,lR=E0.rovers.filter(function(id){return !EQ.rovers[id];}).length;
+  if(lM===0&&lR>0)B.push('Нельзя оставить ровер без экипажа.');}
+ var endsHome=S.plan.length&&S.plan[S.plan.length-1].home,round=planDist()*(endsHome?1:2);
+ if(S.plan.length===1&&dist(originPos(),S.plan[0])<0.01)B.push('Пункт назначения совпадает с источником.');
+ if(ms.length&&!rs.length){var g=1e9;ms.forEach(function(id){var c=col(id),ex=EQ.exoOf[id],km=(100-c.fat)/(ex?CFG.fatKmExo:CFG.fatKm);if(ex)km=Math.min(km,ex.ch/CFG.exoKm);g=Math.min(g,km);});
+  if(round>g)B.push('Пеший лимит '+g.toFixed(0)+' км < '+round.toFixed(0)+' км.');}
+ if(rs.length){var fk=1e9;rs.forEach(function(id){fk=Math.min(fk,rov(id).fuel/CFG.fuelNet);});
+  if(round>fk){if(EQ.urgent)Wn.push('Топливо '+fk.toFixed(0)+' км < '+round.toFixed(0)+' км (срочный игнорирует).');else B.push('Топливный лимит '+fk.toFixed(0)+' км < '+round.toFixed(0)+' км.');}}
+ if(ms.some(function(id){return col(id).fat>50;}))Wn.push('Участники утомлены.');
+ if(S.plan.some(function(n){return n.poi&&n.poi.type==='unk';}))Wn.push('Неизвестная точка в маршруте.');
+ var an=S.plan.filter(function(n){return n.poi&&n.poi.anomaly;}).map(function(n){return n.poi.anomaly;});
+ if(an.length)Wn.push('Аномалии: '+an.join(', ')+'.');
+ if(EQ.urgent)Wn.push('Срочный: без планового сна.');
+ if(!endsHome)Wn.push('Финал не на базе: группа расформируется в конечную точку (станет новым источником).');
+ return{B:B,Wn:Wn};}
+function sendExp(){if(!EQ)return;var v=validate();if(v.B.length)return;
+ var ms=Object.keys(EQ.members).filter(function(k){return EQ.members[k];}),rs=Object.keys(EQ.rovers).filter(function(k){return EQ.rovers[k];});
+ var E0=originExp(),pos=originPos();
+ if(E0){E0.members=E0.members.filter(function(id){return ms.indexOf(id)<0;});E0.rovers=E0.rovers.filter(function(id){return rs.indexOf(id)<0;});
+  if(!E0.members.length&&!E0.rovers.length){E0.done=true;log(E0.name+': расформирована.');}}
+ ms.forEach(function(id){var c=col(id);c.loc='exp';c.carried=EQ.carry['c:'+id]||{};c.exo=EQ.exoOf[id]||null;
+  if(c.exo&&!isExpOrigin()){var pool=srcExos();var ix=pool.indexOf(c.exo);if(ix>=0)pool.splice(ix,1);}});
+ rs.forEach(function(id){var r=rov(id);r.loc='exp';r.cargo=EQ.carry['r:'+id]||{};});
+ S.expN++;var e={id:'e'+S.expN,name:'Экспедиция-'+S.expN,members:ms,rovers:rs,pos:pos,remaining:S.plan.map(function(n){return Object.assign({},n);}),state:'moving',urgent:EQ.urgent,autoRet:EQ.autoRet,stop:null,slow:false,day0:S.day,min0:S.min};
+ S.exps.push(e);S.plan=[];S.planMode=false;S.selExp=null;S.selPoi=null;S.btnAnchor=null;$('mw').hidden=true;EQ=null;S.origin='base';
+ log(e.name+': выдвинулась ('+ms.length+' чел).');renderHud();renderHint();}
+function openSplit(id){SPL={exp:id,m:{},r:{}};S.details=null;$('mw').hidden=false;renderSplit();}
+function doSplit(){var e=S.exps.find(function(x){return x.id===SPL.exp;});if(!e)return;
+ var ms=Object.keys(SPL.m).filter(function(k){return SPL.m[k];});
+ if(!ms.length||ms.length>=e.members.length){$('mw').hidden=true;SPL=null;return;}
+ S.expN++;var ne={id:'e'+S.expN,name:'Экспедиция-'+S.expN,members:ms,rovers:[],pos:{x:e.pos.x,y:e.pos.y},remaining:[],state:'stranded',urgent:false,autoRet:false,stop:null,slow:false,day0:S.day,min0:S.min};
+ e.members=e.members.filter(function(id){return ms.indexOf(id)<0;});S.exps.push(ne);
+ log('Разделение: '+ne.name+' (пешие без транспорта).');
+ $('mw').hidden=true;SPL=null;renderHud();}
+/* ==== рендер HUD ==== */
+function renderTop(){$('topbar').innerHTML='<b>'+VER+'</b>'+
+ '<span style="margin-left:auto"><b>День '+S.day+'</b> '+hhmm()+'</span>'+
+ ' <button class="btn '+(S.speed===0?'on':'')+'" data-act="sp" data-v="0">⏸</button>'+
+ ' <button class="btn '+(S.speed===1?'on':'')+'" data-act="sp" data-v="1">▶</button>'+
+ ' <button class="btn '+(S.speed===4?'on':'')+'" data-act="sp" data-v="4">▶▶</button>';}
+function renderHud(){
+ if(S.origin!=='base'&&!isExpOrigin()&&!POIS.find(function(p){return p.id===S.origin;}))S.origin='base';
+ var rb=$('routebar');
+ var chips=S.plan.length?S.plan.map(function(n,i){return '<span class="chip">'+(i+1)+' '+n.name+' <b data-act="rmplan" data-v="'+i+'" style="cursor:pointer">×</b></span>';}).join(''):'<span class="mut">—</span>';
+ setHTML(rb,(S.planMode?'<b style="color:var(--org)">ПЛАНИРОВАНИЕ</b> ':'')+'<span class="mut">Откуда:</span><b style="color:var(--grn)">'+originLabel()+'</b> <button class="btn" data-act="srcmenu" title="сменить источник">☰</button> <span class="mut">| маршрут:</span> '+chips+' <span class="mut">'+planDist().toFixed(1)+' км</span> '+
+ (S.planMode?'<button class="btn" data-act="endplan">✕ Отменить планирование</button>':'')+' <button class="btn '+(S.plan.length?'':'dis')+'" data-act="clrplan">Сброс</button>');
+ var cw=$('ctx'),pi=$('poi');
+ if(S.selExp){pi.hidden=true;var e=S.exps.find(function(x){return x.id===S.selExp;});
+  if(!e){S.selExp=null;cw.hidden=true;S.btnAnchor=null;placeMapBtns();return;}
+  cw.hidden=false;
+  var cargo=expCargo(e),cw_=W(cargo),capT=expCapTot(e);
+  var eta=e.state==='moving'?fmtDur(remDist(e)/Math.max(0.1,expSpeed(e))):'—';
+  var hh='<h2 style="font-size:16px;margin:0">'+(e.rovers.length?'🚙 ':'🚶 ')+e.name+' <button class="btn" style="float:right" data-act="desel">✕</button></h2>';
+  hh+='<div class="exhdr"><span class="mut">В пути:</span><b>'+fmtDur(elapsedH(e))+'</b> <span class="mut">ETA:</span><b>'+eta+'</b> <span>⚖ '+cw_.toFixed(1)+'/'+capT+' кг</span> <span>🚙'+e.rovers.length+'</span> <span>👤'+e.members.length+'</span>'+(e.urgent?' <span class="warn">⚡срочная</span>':'')+'</div>';
+  hh+='<div class="mut">'+stTxt(e)+' · точка: '+(poiAt(e.pos)?poiAt(e.pos).name:'('+e.pos.x.toFixed(0)+','+e.pos.y.toFixed(0)+')')+'</div>';
+  hh+='<div class="mut" style="margin-top:6px">Полная картина — кнопка «👁 Детали» у маркера.</div>';
+  if(S.event&&S.event.exp===e.id)hh+='<div class="block" style="margin-top:6px">⚠ Форс-мажор: выбери действие у маркера экспедиции на карте. Остальные кнопки недоступны до решения.</div>';
+  if(!S.hoverCtx)setHTML(cw,hh);
+  placeMapBtns();return;}
+ cw.hidden=true;
+ var p=S.selPoi?POIS.find(function(x){return x.id===S.selPoi;}):null;
+ if(!p){pi.hidden=true;placeMapBtns();return;}
+ pi.hidden=false;var pk=poiKey(p);var inPlan=S.plan.some(function(n){return routeKey(n)===routeKey(pNode(p));});
+ var h2='<b style="color:var(--cy)">'+p.name+'</b> <button class="btn" style="float:right" data-act="deselpoi">✕</button><div class="mut">'+poiDesc(p)+'</div><div class="mut">Аномалии: '+(p.anomaly?'<span class="warn">⚠ '+p.anomaly+'</span>':'нет')+'</div><div class="mut">От базы: '+dist(homePoi(),p).toFixed(1)+' км</div>';
+ if(p.type!=='home')h2+='<div class="mut">Склад: '+stashLine(pk)+' · Группа: '+(rosterCols(pk).length||rosterRovs(pk).length?rosterCols(pk).length+' чел'+(rosterRovs(pk).length?', '+rosterRovs(pk).length+' ровер':''):'нет')+'</div>';
+ h2+='<div class="rrow" style="border:none;padding:4px 0 0">';
+ if(pointHas(pk)||p.type==='home')h2+='<button class="btn" data-act="det" data-v="p:'+pk+'">👁 Детали</button> ';
+ if(!S.planMode){
+  if(p.type==='home')h2+='<button class="btn on" data-act="startplan" data-v="base">➤ Создать маршрут экспедиции</button>';
+  else if(pointHas(pk))h2+='<button class="btn on" data-act="startplan" data-v="'+pk+'">➤ Создать маршрут экспедиции</button>';
+  else h2+='<span class="mut">Нет группы/склада — маршрут можно создать с базы или точки с группой.</span>';
+ }else{
+  if(p.type==='home'){
+   if(inPlan){h2+='<button class="btn" data-act="rmnode" data-v="'+p.id+'">✕ Убрать из маршрута</button> <button class="btn on" data-act="build" data-v="'+p.id+'">Собрать экспедицию ➤</button>';}
+   else if(canAddHome())h2+='<button class="btn on" data-act="addroute" data-v="'+p.id+'">В маршрут (возврат)</button>';
+   h2+=' <button class="btn" data-act="endplan">✕ Отменить планирование</button>';
+  }else if(pk===S.origin){
+   h2+='<button class="btn" data-act="endplan">✕ Отменить планирование</button>';
+  }else{
+   h2+='<button class="btn '+(inPlan?'on':'')+'" data-act="addroute" data-v="'+p.id+'">'+(inPlan?'Убрать из маршрута':'В маршрут')+'</button>';
+   if(S.plan.length)h2+=' <button class="btn on" data-act="build" data-v="'+p.id+'">Собрать экспедицию ➤</button>';
+  }
+ }
+ h2+='</div>';
+ setHTML(pi,h2);
+ placeMapBtns();}
+/* ==== стек кнопок (фиксированная позиция) ==== */
+function placeMapBtns(){var mb2=$('mapBtns');
+ if($('mw').hidden===false){mb2.hidden=true;return;}
+ var offs=dispOffsets(),h='',ax=null,ay=null;
+ var anchorE=null,anchorP=null;
+ if(S.selExp)anchorE=S.exps.find(function(x){return x.id===S.selExp;})||null;
+ if(!anchorE){if(S.selPoi)anchorP=POIS.find(function(p){return p.id===S.selPoi;});
+  if(!anchorP&&S.plan.length){var ln=S.plan[S.plan.length-1];if(ln.poi)anchorP=ln.poi;}}
+ if(!anchorE&&!anchorP){mb2.hidden=true;S.btnAnchor=null;return;}
+ if(S.event){var ee=S.exps.find(function(x){return x.id===S.event.exp;});
+  if(ee){var br=S.event.type==='break';
+   h+='<div class="mut" style="background:#2b060acc;border:1px solid var(--red);color:var(--red);padding:2px 6px;font-size:11px;text-align:center;width:100%">'+(br?'⚠ ПОЛОМКА: выбери действие':'⚠ БУРЯ: выбери действие')+'</div>';
+   (br?['🔧 Ремонт (4 ч)','🐢 Половинная скорость','🏠 Возврат на базу']:['⛺ Укрыться (6 ч)','💪 Рывок (+12%)']).forEach(function(t,i){h+='<button class="btn" data-act="ev" data-v="'+i+'">'+t+'</button>';});
+  }}
+ else if(anchorE){var o2=offs[anchorE.id];var inPlE=S.plan.some(function(n){return routeKey(n)==='e'+anchorE.id;});
+  h+='<button class="btn" data-act="det" data-v="e:'+anchorE.id+'">👁 Детали</button>';
+  h+='<button class="btn '+(inPlE?'on':'')+'" data-act="addexp" data-v="'+anchorE.id+'">'+(inPlE?'Убрать из маршрута':'В маршрут')+'</button>';
+  if(anchorE.state==='moving'){h+='<button class="btn on" data-act="ret" data-v="'+anchorE.id+'">🏠 На базу</button><button class="btn" data-act="redir" data-v="'+anchorE.id+'">↻ Перенаправить</button>';}
+  if(anchorE.state==='stranded'){h+='<button class="btn" data-act="split" data-v="'+anchorE.id+'">Разделить (пешие)</button><button class="btn" data-act="addres" data-v="'+anchorE.id+'">+ цель спасения</button>';}
+  var ns=S.exps.find(function(x){return x.id!==anchorE.id&&x.state==='stranded'&&dist(x.pos,anchorE.pos)<0.5&&hasCan(anchorE);});
+  if(ns)h+='<button class="btn on" data-act="refuel" data-v="'+anchorE.id+'|'+ns.id+'">Передать топливо</button>';
+ }else{var p=anchorP;var pk2=poiKey(p);var inPlan=S.plan.some(function(n){return routeKey(n)===routeKey(pNode(p));});
+  if(pointHas(pk2)||p.type==='home')h+='<button class="btn" data-act="det" data-v="p:'+pk2+'">👁 Детали</button>';
+  if(!S.planMode){
+   if(p.type==='home')h+='<button class="btn on" data-act="startplan" data-v="base">➤ Создать маршрут экспедиции</button>';
+   else if(pointHas(pk2))h+='<button class="btn on" data-act="startplan" data-v="'+pk2+'">➤ Создать маршрут экспедиции</button>';
+   else h+='<div class="mut" style="background:#041820cc;padding:2px 6px;font-size:11px">осмотр · нет группы для отправления</div>';
+   if(S.selPoi)h+='<button class="btn" data-act="mseloff">✕ Отмена</button>';
+  }else if(p.type==='home'){
+   if(inPlan){h+='<button class="btn" data-act="rmnode" data-v="'+p.id+'">✕ Убрать из маршрута</button>';
+    h+='<button class="btn on" data-act="build" data-v="'+p.id+'">➤ Собрать экспедицию ('+S.plan.length+')</button>';}
+   else if(canAddHome())h+='<button class="btn on" data-act="addnode" data-v="'+p.id+'">➕ В маршрут (возврат)</button>';
+   h+='<button class="btn" data-act="endplan">✕ Отменить планирование</button>';
+  }else if(pk2===S.origin){
+   h+='<button class="btn" data-act="endplan">✕ Отменить планирование</button>';
+  }else if(!inPlan){
+   h+='<button class="btn on" data-act="addnode" data-v="'+p.id+'">➕ В маршрут</button>';
+  }else{
+   h+='<button class="btn on" data-act="build" data-v="'+p.id+'">➤ Собрать экспедицию ('+S.plan.length+')</button>';
+   h+='<button class="btn" data-act="rmnode" data-v="'+p.id+'">✕ Убрать из маршрута</button>';
+  }}
+ if(S.btnAnchor){ax=S.btnAnchor.x;ay=S.btnAnchor.y;}
+ else if(anchorE){var o3=offs[anchorE.id];ax=PX(anchorE.pos)+(o3?o3.dx:0)+14;ay=PY(anchorE.pos)+(o3?o3.dy:0)+12;}
+ else{ax=PX(anchorP)+14;ay=PY(anchorP)+12;}
+ setHTML(mb2,h);mb2.style.left=ax+'px';mb2.style.top=ay+'px';mb2.hidden=false;}
+function slotRow(pid){var ch='';for(var i in EQ.carry[pid])if(EQ.carry[pid][i]>0)ch+='<span class="chip" draggable="true" data-drag=\'{"from":"'+pid+'","item":"'+i+'"}\'>'+ITEMS[i].n+' x'+EQ.carry[pid][i]+'</span>';
+ return '<div class="rrow drop slots dz" data-drop="'+pid+'">'+(ch||'<span class="mut">↳ слоты груза</span>')+'</div>';}
+function renderEquip(){if(!EQ)return;var v=validate(),E0=originExp();
+ var srcPid=isExpOrigin()?null:S.origin;
+ var srcC=srcPid?rosterCols(srcPid):E0?E0.members.map(col):[];
+ var srcR=srcPid?rosterRovs(srcPid):E0?E0.rovers.map(rov):[];
+ var ms=Object.keys(EQ.members).filter(function(k){return EQ.members[k];}),rs=Object.keys(EQ.rovers).filter(function(k){return EQ.rovers[k];});
+ var spd=rs.length?CFG.rovSp:(ms.length?Math.min.apply(null,ms.map(function(id){var ex=EQ.exoOf[id];return(ex&&ex.ch>0)?CFG.exoSp:CFG.footSp;})):0);
+ var dur=spd?fmtDur(planDist()/spd):'—';
+ var capT=ms.reduce(function(s,id){return s+(EQ.exoOf[id]?CFG.capExo:CFG.capFoot);},0)+rs.length*CFG.capRov;
+ var wT=parts().reduce(function(s,p){return partW(p);},0);
+ var mb=$('mb'),cs=[].slice.call(mb.querySelectorAll('.col')).map(function(e){return e.scrollTop;}),vz=mb.querySelector('#valzone'),vzs=vz?vz.scrollTop:0;
+ var L='<div class="colhead"><button class="btn" data-act="srcmenu" title="сменить источник">☰</button> ⌂ '+originLabel()+'</div><div class="sechead">🚙 Роверы</div>';
+ var fr=srcR.filter(function(r){return !EQ.rovers[r.id];});
+ L+=fr.length?fr.map(function(r){return '<div class="rrow click" data-act="mkR" data-v="'+r.id+'"><span class="grow">🚙 '+r.n+' <span class="mut">⛽'+r.fuel.toFixed(0)+'% · 4 мест · 100 кг</span></span><span class="mut">➤</span></div>';}).join(''):'<div class="rrow mut">нет</div>';
+ L+='<div class="sechead">👤 Колонисты</div>';
+ var fc=srcC.filter(function(c){return !EQ.members[c.id];});
+ L+=fc.length?fc.map(function(c){return '<div class="rrow click" data-act="mkC" data-v="'+c.id+'"><span class="grow">👤 '+c.n+' <span class="mut">уст.'+c.fat.toFixed(0)+'%</span></span><span class="mut">➤</span></div>';}).join(''):'<div class="rrow mut">нет</div>';
+ if(srcPid){L+='<div data-drop="base" class="dz"><div class="sechead">◈ Склад точки (тяни; сюда — вернуть) · exo: '+exoPool(srcPid).length+'</div>';
+  CATS.forEach(function(cat){var its=Object.keys(ITEMS).filter(function(i){return ITEMS[i].cat===cat&&srcStash()[i]>0;});if(!its.length)return;
+   L+='<div class="sechead" style="background:#0a3140">'+cat+'</div>';
+   its.forEach(function(i){L+='<div class="rrow" draggable="true" data-drag=\'{"from":"base","item":"'+i+'"}\'><span class="grow chip src">⇄ '+ITEMS[i].n+' x'+srcStash()[i]+' · '+ITEMS[i].w+' кг</span></div>';});});
+  L+='</div>';}
+ else L+='<div class="sechead">◈ Груз аварии</div><div class="rrow mut">Отметьте участников — их груз станет пулом.</div>';
+ var R='<div class="colhead">➤ Экспедиция '+(S.expN+1)+'</div><div class="sechead">🚙 Роверы (клик=вернуть)</div>';
+ if(rs.length)rs.forEach(function(id){var r=rov(id),pid='r:'+id;
+  R+='<div class="rrow click drop dz" data-drop="'+pid+'" data-act="unR" data-v="'+id+'"><span class="mut">◄</span><span class="grow">🚙 '+r.n+' <span class="mut">⛽'+r.fuel.toFixed(0)+'% · '+partW(pid).toFixed(1)+'/100 кг</span> <span class="bar"><i style="width:'+Math.min(100,partW(pid))+'%"></i></span></span></div>'+slotRow(pid);});
+ else R+='<div class="rrow mut">—</div>';
+ R+='<div class="sechead">👤 Колонисты (клик=вернуть)</div>';
+ if(ms.length)ms.forEach(function(id){var c=col(id),ex=EQ.exoOf[id],pid='c:'+id,cap=ex?CFG.capExo:CFG.capFoot;
+  R+='<div class="rrow click drop dz" data-drop="'+pid+'" data-act="unC" data-v="'+id+'"><span class="mut">◄</span><span class="grow">👤 '+c.n+' '+(srcPid?'<button class="btn '+(ex?'on':'')+'" data-act="exo" data-v="'+id+'">Exo '+(ex?Math.round(ex.ch):0)+'%</button>':'')+' <span class="mut">уст.'+c.fat.toFixed(0)+'% · '+partW(pid).toFixed(1)+'/'+cap+' кг</span> <span class="bar"><i style="width:'+Math.min(100,partW(pid)/cap*100)+'%"></i></span></span></div>'+slotRow(pid);});
+ else R+='<div class="rrow mut">—</div>';
+ R+='<div class="sechead">◈ Пул (тяни на участников; сюда — вернуть)</div><div id="poolzone" data-drop="pool" class="dz">';
+ var pc='';for(var i in EQ.stash)if(EQ.stash[i]>0)pc+='<span class="chip" draggable="true" data-drag=\'{"from":"pool","item":"'+i+'"}\'>'+ITEMS[i].n+' x'+EQ.stash[i]+'</span>';
+ R+=(pc||'<span class="mut">пусто</span>')+' <button class="btn" data-act="auto">Автораспределить</button></div>';
+ var val=v.B.map(function(b){return '<div class="block">⛔ '+b+'</div>';}).join('')+v.Wn.map(function(b){return '<div class="warn">⚠ '+b+'</div>';}).join('');
+ if(!v.B.length&&!v.Wn.length)val='<div class="ok">✓ Проверки пройдены</div>';
+ mb.innerHTML='<h2>СНАРЯЖЕНИЕ | источник: '+originLabel()+' <button class="btn" style="float:right" data-act="closeM">✕</button></h2>'+
+ '<div class="hdr"><span>Путь: <b>'+dur+'</b></span><span>⚖ '+wT.toFixed(1)+'/'+capT+' кг</span><span>🚙'+rs.length+'</span><span>👤'+ms.length+'</span><label><input type="checkbox" data-act="urg" '+(EQ.urgent?'checked':'')+'> Срочная</label><label><input type="checkbox" data-act="aret" '+(EQ.autoRet?'checked':'')+'> Авторозврат</label><button class="btn" data-act="reset">Reset</button></div>'+
+ '<div class="grid"><div class="col">'+L+'</div><div class="col">'+R+'</div></div><div id="valzone">'+val+'</div>'+
+ '<div class="rrow sendrow"><button class="btn '+(v.B.length?'dis':'on')+'" data-act="send">ОТПРАВИТЬ ЭКСПЕДИЦИЮ</button> <button class="btn" data-act="closeM">✕ Закрыть (черновик)</button></div>';
+ var nc=[].slice.call(mb.querySelectorAll('.col'));nc.forEach(function(e,i){e.scrollTop=cs[i]||0;});
+ var nv=mb.querySelector('#valzone');if(nv)nv.scrollTop=vzs;}
+function renderSplit(){var e=S.exps.find(function(x){return x.id===SPL.exp;});if(!e)return;
+ $('mb').innerHTML='<h2>РАЗДЕЛИТЬ '+e.name+' (пешие уходят отдельно)</h2><div class="mut">Пешая группа без транспорта получит статус аварии (топливо 0) — пойдёт пешком или ждите спасателей.</div><h3 style="color:var(--cy)">Колонисты</h3>'+
+ e.members.map(function(id){return '<div class="rrow"><label><input type="checkbox" data-act="sm" data-v="'+id+'" '+(SPL.m[id]?'checked':'')+'></label><span class="grow">'+col(id).n+'</span></div>';}).join('')+
+ '<div class="rrow"><button class="btn on" data-act="splitok">Отколоть пеших</button> <button class="btn" data-act="closeM2">Отмена</button></div>';}
+function renderHint(){
+ if(S.flash&&performance.now()<S.flashT){$('hint').innerHTML='<span style="color:var(--org)">'+S.flash+'</span>';return;}
+ S.flash=null;
+ $('hint').textContent=S.event?'ФОРС-МАЖОР: выбери действие у маркера экспедиции — остальные кнопки недоступны до решения'
+ :S.mode&&S.mode.t==='redirect'?'ПЕРЕНАПРАВЛЕНИЕ: клик по точке | Esc'
+ :S.planMode?'Планирование: ➕ добавить точку (база = возврат) · ➤ Собрать (N) у любой точки маршрута · клик по пустой карте = снять выделение'
+ :'Осмотр: клик по точке = инфо | 👁 Детали = окно | ➤ Создать маршрут экспедиции = с базы или точки с группой';}
+/* ==== карта ==== */
+var cv=$('cv'),cx=cv.getContext('2d'),SC=1,OX=0,OY=0;
+function resize(){cv.width=innerWidth;cv.height=innerHeight;SC=Math.min(cv.width/MAPW,cv.height/MAPH)*0.92;OX=(cv.width-MAPW*SC)/2;OY=(cv.height-MAPH*SC)/2;}
+addEventListener('resize',resize);resize();
+function PX(p){return OX+p.x*SC;}function PY(p){return OY+p.y*SC;}
+var COL={home:'#5dff9d',res:'#4f8cff',deb:'#ffb347',unk:'#ff5d6c'};
+function draw(){cx.fillStyle='#04121a';cx.fillRect(0,0,cv.width,cv.height);
+ cx.strokeStyle='#0e4b5c44';cx.lineWidth=1;var x,y;
+ for(x=0;x<=MAPW;x+=2){cx.beginPath();cx.moveTo(PX({x:x,y:0}),PY({x:x,y:0}));cx.lineTo(PX({x:x,y:MAPH}),PY({x:x,y:MAPH}));cx.stroke();}
+ for(y=0;y<=MAPH;y+=2){cx.beginPath();cx.moveTo(PX({x:0,y:y}),PY({x:0,y:y}));cx.lineTo(PX({x:MAPW,y:y}),PY({x:MAPW,y:y}));cx.stroke();}
+ cx.strokeStyle='#35e0ff55';cx.strokeRect(PX({x:0,y:0}),PY({x:0,y:0}),MAPW*SC,MAPH*SC);
+ var op=originPos(),offs=dispOffsets(),tn=performance.now();
+ POIS.forEach(function(p){cx.save();cx.shadowColor=COL[p.type];cx.shadowBlur=14;cx.fillStyle=COL[p.type];cx.beginPath();cx.moveTo(PX(p),PY(p)-8);cx.lineTo(PX(p)+6,PY(p));cx.lineTo(PX(p),PY(p)+8);cx.lineTo(PX(p)-6,PY(p));cx.fill();cx.restore();
+  cx.fillStyle='#bfeef7';cx.font='10px monospace';cx.fillText(p.name,PX(p)+9,PY(p)+3);
+  if(p.anomaly){cx.fillStyle='#ffb347';cx.fillText('!',PX(p)-10,PY(p)-8);}
+  if(pointHas(poiKey(p))&&p.type!=='home'){cx.fillStyle='#7ff3ff';cx.fillText('▣',PX(p)-12,PY(p)+12);}
+  if(S.planMode&&p.type!=='home'){cx.strokeStyle='#35e0ff99';cx.lineWidth=1.5;cx.beginPath();cx.arc(PX(p),PY(p),14+2*Math.sin(tn/300),0,7);cx.stroke();cx.lineWidth=1;}
+  if(S.selPoi===p.id){cx.strokeStyle='#fff';cx.lineWidth=1.5;cx.strokeRect(PX(p)-11,PY(p)-11,22,22);cx.lineWidth=1;}
+  var idx=S.plan.findIndex(function(n){return n.poi&&n.poi.id===p.id;});
+  if(idx>=0){cx.fillStyle='#35e0ff';cx.beginPath();cx.arc(PX(p),PY(p)-14,7,0,7);cx.fill();cx.fillStyle='#02222c';cx.fillText(idx+1,PX(p)-2,PY(p)-11);}});
+ if(S.origin!=='base'){cx.strokeStyle='#ffb347';cx.lineWidth=2;cx.beginPath();cx.arc(PX(op),PY(op),13,0,7);cx.stroke();cx.beginPath();cx.arc(PX(op),PY(op),17,0,7);cx.stroke();cx.lineWidth=1;
+  cx.fillStyle='#ffb347';cx.font='11px monospace';cx.fillText('источник ✓',PX(op)-26,PY(op)-22);}
+ cx.setLineDash([6,4]);cx.strokeStyle='#35e0ff';
+ if(S.plan.length){cx.beginPath();cx.moveTo(PX(op),PY(op));S.plan.forEach(function(n){cx.lineTo(PX(n),PY(n));});cx.stroke();}
+ cx.setLineDash([]);
+ S.exps.forEach(function(e){var off=offs[e.id],px=PX(e.pos)+(off?off.dx:0),py=PY(e.pos)+(off?off.dy:0);
+  if(S.event&&S.event.exp===e.id){cx.strokeStyle='#ff5d6c';cx.lineWidth=2;cx.beginPath();cx.arc(px,py,14+3*Math.sin(tn/200),0,7);cx.stroke();cx.lineWidth=1;}
+  cx.strokeStyle=e.state==='stranded'?'#ff5d6c':'#35e0ff';cx.lineWidth=1;cx.setLineDash([3,3]);cx.beginPath();cx.moveTo(px,py);e.remaining.forEach(function(n){cx.lineTo(PX(n),PY(n));});cx.stroke();cx.setLineDash([]);
+  cx.fillStyle='#06202b';cx.beginPath();cx.arc(px,py,10,0,7);cx.fill();cx.strokeStyle=S.selExp===e.id?'#fff':'#35e0ff';cx.lineWidth=S.selExp===e.id?2:1.4;cx.stroke();
+  cx.font='12px monospace';cx.fillText(e.rovers.length?'🚙':'',px-7,py+5);
+  if(e.state==='stranded'){cx.fillStyle='#ff5d6c';cx.font='9px monospace';cx.fillText('⛽0',px-7,py-12);}
+  if(e.stop){cx.fillStyle='#7ff3ff';cx.font='9px monospace';cx.fillText('Zz',px+8,py-12);}
+  cx.fillStyle='#bfeef7';cx.font='10px monospace';cx.fillText(e.name,px+13,py-6);});}
+/* ==== ввод ==== */
+function pxOf(e,offs){var o=offs[e.id];return PX(e.pos)+(o?o.dx:0);}
+function pyOf(e,offs){var o=offs[e.id];return PY(e.pos)+(o?o.dy:0);}
+cv.addEventListener('click',function(ev){var mx=ev.clientX,my=ev.clientY,hit=null,hd=14;
+ POIS.forEach(function(p){var d=Math.hypot(mx-PX(p),my-PY(p));if(d<hd){hd=d;hit=p;}});
+ if(S.mode&&S.mode.t==='redirect'&&hit&&hit.type!=='home'){var e=S.exps.find(function(x){return x.id===S.mode.exp;});
+  if(e){e.remaining=[pNode(hit)];e.state='moving';e.stop=null;log(e.name+': перенаправлена.');}S.mode=null;renderHint();renderHud();return;}
+ var offs=dispOffsets();
+ var ce=S.exps.find(function(e2){var px=pxOf(e2,offs),py=pyOf(e2,offs);return Math.hypot(mx-px,my-py)<12;});
+ if(ce){S.selExp=ce.id;S.selPoi=null;S.btnAnchor={x:pxOf(ce,offs)+14,y:pyOf(ce,offs)+12};renderHud();return;}
+ if(hit){S.selPoi=hit.id;S.selExp=null;S.btnAnchor={x:PX(hit)+14,y:PY(hit)+12};renderHud();return;}
+ S.selExp=null;S.selPoi=null;S.btnAnchor=null;renderHud();});
+addEventListener('keydown',function(ev){if(ev.key==='Escape'){S.mode=null;$('qtyPop').hidden=true;S.qp=null;$('srcPop').hidden=true;
+ if(S.planMode&&!S.plan.length)endPlan();
+ renderHint();}});
+document.addEventListener('dragstart',function(ev){var t=ev.target.closest('[data-drag]');if(!t)return;ev.dataTransfer.setData('text/plain',t.dataset.drag);S.dragging=true;document.body.classList.add('dragc');});
+document.addEventListener('dragend',function(){S.dragging=false;document.body.classList.remove('dragc');document.querySelectorAll('.dz.over').forEach(function(e){e.classList.remove('over');});});
+document.addEventListener('dragover',function(ev){var z=ev.target.closest('[data-drop]');if(z)ev.preventDefault();document.querySelectorAll('.dz.over').forEach(function(e){if(e!==z)e.classList.remove('over');});if(z)z.classList.add('over');});
+document.addEventListener('drop',function(ev){var z=ev.target.closest('[data-drop]');if(!z)return;ev.preventDefault();var d=null;try{d=JSON.parse(ev.dataTransfer.getData('text/plain'));}catch(_){}
+ S.dragging=false;document.body.classList.remove('dragc');document.querySelectorAll('.dz.over').forEach(function(e){e.classList.remove('over');});
+ if(!d||!EQ)return;var to=z.dataset.drop;if(d.from===to){renderEquip();return;}if(to==='base'&&isExpOrigin()){renderEquip();return;}
+ openQty(d.from,to,d.item,availInfo(d.from,to,d.item),ev.clientX,ev.clientY);});
+document.addEventListener('click',function(ev){
+ if(ev.target.closest('.chip'))return;
+ var sp=$('srcPop');
+ if(!sp.hidden&&!ev.target.closest('#srcPop')&&!ev.target.closest('[data-act="srcmenu"]')&&!ev.target.closest('[data-act="build"]')){sp.hidden=true;}
+ var t=ev.target.closest('[data-act]');if(!t)return;var a=t.dataset.act,v=t.dataset.v;
+ try{
+ if(!EQ&&['mkC','unC','mkR','unR','exo','auto','urg','aret','reset','send'].indexOf(a)>=0&& !$('mw').hidden)EQ=freshDraft();
+ if(a==='sp'){S.speed=+v;renderTop();}
+ else if(a==='startplan')startPlan(v);
+ else if(a==='endplan')endPlan();
+ else if(a==='det')openDetails(v);
+ else if(a==='closedet'){S.details=null;$('mw').hidden=true;renderHud();}
+ else if(a==='srcmenu'){var sp2=$('srcPop');if(sp2.hidden)openSrcPop(ev.clientX,ev.clientY);else sp2.hidden=true;}
+ else if(a==='setsrc')chooseSource(v);
+ else if(a==='addnode'){addRouteNode(pNode(POIS.find(function(p){return p.id===v;})));}
+ else if(a==='rmnode'){rmRouteNode(pNode(POIS.find(function(p){return p.id===v;})));}
+ else if(a==='mseloff'){S.selPoi=null;S.btnAnchor=null;renderHud();}
+ else if(a==='clrplan'){S.plan=[];renderHud();renderHint();}
+ else if(a==='rmplan'){S.plan.splice(+v,1);renderHud();renderHint();}
+ else if(a==='desel'){S.selExp=null;S.btnAnchor=null;renderHud();}
+ else if(a==='deselpoi'){S.selPoi=null;S.btnAnchor=null;renderHud();}
+ else if(a==='addroute'){var pp=POIS.find(function(p){return p.id===v;});
+  var inP=S.plan.some(function(n){return routeKey(n)===routeKey(pNode(pp));});
+  if(!inP&&pp.type==='home'&&!canAddHome()){flash('База — источник; добавь её после других точек (возврат).');return;}
+  toggleRouteNode(pNode(pp));}
+ else if(a==='addexp'){var ex=S.exps.find(function(x){return x.id===v;});toggleRouteNode({x:ex.pos.x,y:ex.pos.y,name:ex.name,exp:ex.id});}
+ else if(a==='build')startBuild(v);
+ else if(a==='closeM')closeKeep();
+ else if(a==='closeM2'){$('mw').hidden=true;SPL=null;}
+ else if(a==='mkC'){markC(v,true);renderEquip();}
+ else if(a==='unC'){markC(v,false);renderEquip();}
+ else if(a==='mkR'){markR(v,true);renderEquip();}
+ else if(a==='unR'){markR(v,false);renderEquip();}
+ else if(a==='exo'){if(EQ.exoOf[v])delete EQ.exoOf[v];else{var u=srcExos().find(function(x){return Object.values(EQ.exoOf).indexOf(x)<0;});if(u)EQ.exoOf[v]=u;}renderEquip();}
+ else if(a==='auto'){autoDist();renderEquip();}
+ else if(a==='urg'){EQ.urgent=!EQ.urgent;renderEquip();}
+ else if(a==='aret'){EQ.autoRet=!EQ.autoRet;renderEquip();}
+ else if(a==='reset'){reclaimAll();EQ.members={};EQ.rovers={};EQ.exoOf={};EQ.snap={};renderEquip();}
+ else if(a==='send')sendExp();
+ else if(a==='ret'){var e=S.exps.find(function(x){return x.id===v;});e.remaining=[homeNode()];e.state='moving';e.stop=null;log(e.name+': возврат на базу.');renderHud();}
+ else if(a==='redir'){S.mode={t:'redirect',exp:v};renderHint();}
+ else if(a==='split')openSplit(v);
+ else if(a==='sm'){SPL.m[v]=!SPL.m[v];renderSplit();}
+ else if(a==='splitok'){doSplit();}
+ else if(a==='addres'){var e2=S.exps.find(function(x){return x.id===v;});S.plan.push({x:e2.pos.x,y:e2.pos.y,name:e2.name,stranded:e2.id});renderHud();renderHint();}
+ else if(a==='refuel'){var q=v.split('|');refuel(q[0],q[1]);}
+ else if(a==='fev')fireEvent(S.exps.find(function(x){return x.id===v;}));
+ else if(a==='ev')eventChoice(+v);
+ }catch(err){showErr(err.message);}});
+/* ==== цикл ==== */
+var last=performance.now(),lastDay=1;
+function advance(gh){S.min+=gh*60;while(S.min>=1440){S.min-=1440;S.day++;
+  S.cols.forEach(function(c){if(c.loc!=='exp'){var st=stashOf(c.loc);if(st.ration>0)st.ration--;else{c.fat=Math.min(100,c.fat+8);log(c.n+': без пайка на точке '+c.loc);}}});}
+ S.cols.forEach(function(c){if(c.loc!=='exp')c.fat=Math.max(0,c.fat-(c.loc==='base'?CFG.baseFat:CFG.fieldFat)*gh);});
+ S.rovs.forEach(function(r){if(r.loc==='base')r.fuel=Math.min(100,r.fuel+CFG.baseFuel*gh);});
+ S.base.exos.forEach(function(x){x.ch=Math.min(100,x.ch+CFG.baseExo*gh);});
+ S.exps.forEach(function(e){stepExp(e,gh);});
+ S.exps=S.exps.filter(function(e){return !e.done;});}
+function loop(t){var dt=Math.min(0.1,(t-last)/1000);last=t;
+ if(S.speed>0&&!S.event)advance(dt*S.speed*CFG.minPerSec/60);
+ if(S.flash&&performance.now()>S.flashT){S.flash=null;renderHint();}
+ draw();requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+var mbEl=$('mb'),cwEl=$('ctx');
+mbEl.addEventListener('mouseenter',function(){S.hoverMB=true;});
+mbEl.addEventListener('mouseleave',function(){S.hoverMB=false;});
+cwEl.addEventListener('mouseenter',function(){S.hoverCtx=true;});
+cwEl.addEventListener('mouseleave',function(){S.hoverCtx=false;});
+setInterval(function(){renderTop();renderHud();renderHint();
+ if(!$('mw').hidden&&S.details&&!EQ&&!SPL&&!S.hoverMB)renderDetails();
+ if(EQ&&!S.event&&!S.dragging&&!S.qp&&!$('mw').hidden&&!S.hoverMB)renderEquip();},500);
+try{
+ renderTop();renderHud();renderHint();
+ var ok=$('okv');ok.hidden=false;ok.textContent=VER+' загружен OK';setTimeout(function(){ok.hidden=true;},1500);
+ log(VER+': после отправки экспедиция не выделяется (стек не появляется); время+скорость справа сверху.');
+}catch(err){showErr(err.message);}
+</script></body></html>
